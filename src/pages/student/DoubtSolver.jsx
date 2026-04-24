@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useContext } from "react";
+import { useState, useRef, useEffect, } from "react";
 import { toast } from "react-toastify";
-import { AuthContext } from "../../context/AuthContext";
+import { useAuth } from '../../context/AuthContext'
 import axiosInstance from "../../api/axiosInstance";
 
 /* ─────────────────────────────────────────────
@@ -154,7 +154,7 @@ function EmptyState({ onSuggestion }) {
    Main Page
 ───────────────────────────────────────────── */
 export default function DoubtSolver() {
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth()
 
   const [messages, setMessages] = useState([]); // { role, content, time }
   const [input, setInput] = useState("");

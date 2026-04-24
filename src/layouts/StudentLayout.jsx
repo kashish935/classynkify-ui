@@ -1,7 +1,6 @@
 // src/layouts/StudentLayout.jsx
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { useContext } from 'react'
-import { AuthContext } from '../context/AuthContext'
+import { useAuth } from '../context/AuthContext'
 
 const NAV = [
   { to: '/student/dashboard',    label: '🏠 Dashboard'    },
@@ -12,7 +11,7 @@ const NAV = [
 ]
 
 export default function StudentLayout() {
-  const { user, logout } = useContext(AuthContext)
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = () => {
