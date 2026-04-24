@@ -97,7 +97,7 @@ const Login = () => {
               </svg>
             </div>
             <span style={{ fontSize: '20px', fontWeight: '700', color: '#0f172a', letterSpacing: '-0.3px' }}>
-              EduStream
+              Classynkify
             </span>
           </div>
 
@@ -232,7 +232,7 @@ const Login = () => {
           </form>
 
           <p style={{ textAlign: 'center', fontSize: '13px', color: '#64748b', marginTop: '28px' }}>
-            New to EduStream?{' '}
+            New to Classynkify?{' '}
             <Link to="/register" style={{ color: '#2563eb', fontWeight: '600', textDecoration: 'none' }}>
               Create an account
             </Link>

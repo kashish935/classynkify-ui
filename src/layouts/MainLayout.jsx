@@ -134,7 +134,7 @@ const MainLayout = ({ children }) => {
           </div>
           {sidebarOpen && (
             <span style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>
-              EduStream
+              Classynkify
             </span>
           )}
         </div>
@@ -274,7 +274,7 @@ const MainLayout = ({ children }) => {
 
             {/* Breadcrumb */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '13px', color: '#94a3b8' }}>EduStream</span>
+              <span style={{ fontSize: '13px', color: '#94a3b8' }}>Classynkify</span>
               <span style={{ fontSize: '13px', color: '#cbd5e1' }}>/</span>
               <span style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a', textTransform: 'capitalize' }}>
                 {location.pathname.replace('/', '') || 'Dashboard'}

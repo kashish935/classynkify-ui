@@ -108,12 +108,12 @@ const handleSubmit = async (e) => {
                 <path d="M2 12l10 5 10-5" stroke="white" strokeWidth="2" strokeLinecap="round"/>
               </svg>
             </div>
-            <span style={{ fontSize: '20px', fontWeight: '700', color: '#0f172a', letterSpacing: '-0.3px' }}>EduStream</span>
+            <span style={{ fontSize: '20px', fontWeight: '700', color: '#0f172a', letterSpacing: '-0.3px' }}>Classynkify</span>
           </div>
 
           <div style={{ marginBottom: '28px' }}>
             <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>Create your account</h1>
-            <p style={{ fontSize: '14px', color: '#64748b' }}>Join thousands of students and teachers on EduStream</p>
+            <p style={{ fontSize: '14px', color: '#64748b' }}>Join thousands of students and teachers on Classynkify</p>
           </div>
 
           {error && (
