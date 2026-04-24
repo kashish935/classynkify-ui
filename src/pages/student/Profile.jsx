@@ -1,12 +1,12 @@
-import { useState, useEffect, useContext, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { toast } from 'react-toastify'
 import api from '../../api/axiosInstance'
-import { AuthContext } from '../../context/AuthContext'
+import { useAuth } from '../../context/AuthContext'
 
 const TABS = ['Personal Info', 'Change Password']
 
 export default function Profile() {
-  const { user, updateUser } = useContext(AuthContext)
+  const { user, updateUser } = useAuth()
   const [activeTab, setActiveTab] = useState('Personal Info')
 
   return (

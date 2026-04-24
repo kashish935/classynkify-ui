@@ -7,7 +7,6 @@ import PrivateRoute from './components/PrivateRoute'
 
 import Login        from './pages/Login'
 import Register     from './pages/Register'
-import Unauthorized from './pages/Unauthorized'
 
 import StudentLayout from './layouts/StudentLayout'
 import Dashboard     from './pages/student/Dashboard'
@@ -26,7 +25,6 @@ export default function App() {
           {/* Public */}
           <Route path="/login"        element={<Login />} />
           <Route path="/register"     element={<Register />} />
-          <Route path="/unauthorized" element={<Unauthorized />} />
 
           {/* Student (protected + nested) */}
           <Route
