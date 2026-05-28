@@ -16,20 +16,6 @@ const Login = () => {
     if (error) setError('')
   }
 
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault()
-  //   setError('')
-  //   setLoading(true)
-  //   try {
-  //     const res = await api.post('/auth/login', formData)
-  //     login(res.data.user, res.data.token)
-  //     navigate(res.data.user.role === 'teacher' ? '/dashboard' : '/courses')
-  //   } catch (err) {
-  //     setError(err.response?.data?.message || 'Invalid email or password.')
-  //   } finally {
-  //     setLoading(false)
-  //   }
-  // }
 
   const handleSubmit = async (e) => {
   e.preventDefault()
@@ -57,7 +43,7 @@ const Login = () => {
     }
 
     login(user, token)
-    navigate(user.role === 'teacher' ? '/dashboard' : '/courses')
+    navigate(user.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard')
 
   } catch (err) {
     console.error('Login error:', err.response?.data)

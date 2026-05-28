@@ -1,428 +1,291 @@
-import { useState, useEffect, useRef } from 'react'
-import { toast } from 'react-toastify'
-import api from '../../api/axiosInstance'
+import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import axiosInstance from '../../api/axiosInstance'
+import { toast } from 'react-toastify'
 
-const TABS = ['Personal Info', 'Change Password']
+const InputField = ({ label, value, onChange, placeholder, disabled, type = 'text' }) => (
+  <div>
+    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '6px', letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+      {label}
+    </label>
+    <input
+      type={type} value={value} onChange={onChange}
+      placeholder={placeholder} disabled={disabled}
+      style={{
+        width: '100%', padding: '11px 14px',
+        background: disabled ? '#f8fafc' : '#fff',
+        border: '1.5px solid #e2e8f0', borderRadius: '12px',
+        fontSize: '14px', color: disabled ? '#94a3b8' : '#0f172a',
+        outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+        cursor: disabled ? 'not-allowed' : 'text', transition: 'border-color 0.2s'
+      }}
+      onFocus={e => { if (!disabled) e.target.style.borderColor = '#6366f1' }}
+      onBlur={e => { e.target.style.borderColor = '#e2e8f0' }}
+    />
+    {disabled && <p style={{ fontSize: '11px', color: '#cbd5e1', marginTop: '4px' }}>This field cannot be changed</p>}
+  </div>
+)
+
+const TabBtn = ({ label, active, onClick }) => (
+  <button onClick={onClick} style={{
+    padding: '10px 22px', borderRadius: '12px', fontSize: '14px', fontWeight: '600',
+    background: active ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'transparent',
+    color: active ? '#fff' : '#64748b',
+    border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+  }}>
+    {label}
+  </button>
+)
 
 export default function Profile() {
   const { user, updateUser } = useAuth()
-  const [activeTab, setActiveTab] = useState('Personal Info')
+  const [tab, setTab] = useState('info')
+  const [saving, setSaving] = useState(false)
+
+  const [form, setForm] = useState({
+    firstName: user?.name?.split(' ')[0] || '',
+    lastName: user?.name?.split(' ').slice(1).join(' ') || '',
+    phone: user?.phone || '',
+    bio: user?.bio || '',
+  })
+
+  const [passwords, setPasswords] = useState({
+    current: '', newPass: '', confirm: ''
+  })
+  const [showPwd, setShowPwd] = useState({ current: false, newPass: false, confirm: false })
+
+  const handleSaveInfo = async () => {
+    setSaving(true)
+    try {
+      const name = `${form.firstName} ${form.lastName}`.trim()
+      const res = await axiosInstance.put('/student/profile', { name, phone: form.phone, bio: form.bio })
+      updateUser(res.data?.user || { name, phone: form.phone, bio: form.bio })
+      toast.success('Profile updated!')
+    } catch {
+      toast.error('Failed to update profile.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleChangePassword = async () => {
+    if (passwords.newPass !== passwords.confirm) {
+      toast.error('Passwords do not match.'); return
+    }
+    if (passwords.newPass.length < 6) {
+      toast.error('Password must be at least 6 characters.'); return
+    }
+    setSaving(true)
+    try {
+      await axiosInstance.put('/student/profile/password', {
+        currentPassword: passwords.current,
+        newPassword: passwords.newPass
+      })
+      toast.success('Password changed!')
+      setPasswords({ current: '', newPass: '', confirm: '' })
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to change password.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const initials = ((form.firstName[0] || '') + (form.lastName[0] || '')).toUpperCase() || user?.name?.[0]?.toUpperCase() || '?'
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Profile & Settings</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage your personal information and security</p>
+    <div style={{ padding: '32px 40px', maxWidth: '760px', margin: '0 auto', fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+
+      {/* Header */}
+      <div style={{ marginBottom: '32px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.5px', marginBottom: '4px' }}>
+          👤 Profile & Settings
+        </h1>
+        <p style={{ fontSize: '14px', color: '#94a3b8' }}>Manage your personal information and security</p>
+      </div>
+
+      {/* Profile hero */}
+      <div style={{
+        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+        borderRadius: '24px', padding: '28px 32px', marginBottom: '28px',
+        display: 'flex', alignItems: 'center', gap: '24px',
+        boxShadow: '0 8px 32px rgba(99,102,241,0.25)'
+      }}>
+        <div style={{
+          width: '80px', height: '80px', borderRadius: '50%',
+          background: 'rgba(255,255,255,0.2)',
+          border: '3px solid rgba(255,255,255,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '28px', fontWeight: '800', color: '#fff', flexShrink: 0,
+          position: 'relative'
+        }}>
+          {initials}
+          <label htmlFor="avatar-upload" style={{
+            position: 'absolute', bottom: '-2px', right: '-2px',
+            width: '26px', height: '26px', borderRadius: '50%',
+            background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+          }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round"/>
+            </svg>
+            <input id="avatar-upload" type="file" accept="image/*" style={{ display: 'none' }} />
+          </label>
+        </div>
+        <div>
+          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#fff', marginBottom: '4px' }}>
+            {user?.name || 'Student'}
+          </h2>
+          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.75)', marginBottom: '8px' }}>{user?.email}</p>
+          <span style={{
+            fontSize: '12px', fontWeight: '600', color: '#6366f1',
+            background: '#fff', padding: '3px 12px', borderRadius: '999px'
+          }}>
+            {user?.role || 'Student'}
+          </span>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-        {TABS.map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors
-              ${activeTab === tab
-                ? 'bg-white text-indigo-700 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-              }`}
-          >
-            {tab}
-          </button>
-        ))}
+      <div style={{
+        display: 'flex', gap: '4px', padding: '4px',
+        background: '#f8fafc', borderRadius: '14px', marginBottom: '28px',
+        width: 'fit-content'
+      }}>
+        <TabBtn label="Personal Info" active={tab === 'info'} onClick={() => setTab('info')} />
+        <TabBtn label="Change Password" active={tab === 'password'} onClick={() => setTab('password')} />
       </div>
 
-      {activeTab === 'Personal Info' && (
-        <PersonalInfoTab user={user} updateUser={updateUser} />
-      )}
-      {activeTab === 'Change Password' && (
-        <ChangePasswordTab />
-      )}
-    </div>
-  )
-}
+      {/* Content */}
+      <div style={{
+        background: '#fff', borderRadius: '24px', padding: '32px',
+        border: '1px solid #f1f5f9', boxShadow: '0 1px 4px rgba(0,0,0,0.05)'
+      }}>
 
-// ─── Personal Info Tab ────────────────────────────────────────────────────────
+        {tab === 'info' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <InputField label="First Name" value={form.firstName}
+                onChange={e => setForm({ ...form, firstName: e.target.value })}
+                placeholder="John" />
+              <InputField label="Last Name" value={form.lastName}
+                onChange={e => setForm({ ...form, lastName: e.target.value })}
+                placeholder="Doe" />
+            </div>
 
-function PersonalInfoTab({ user, updateUser }) {
-  const fileRef = useRef(null)
+            <InputField label="Email Address" value={user?.email || ''} disabled />
 
-  const [form, setForm] = useState({
-    firstName: user?.firstName ?? '',
-    lastName:  user?.lastName  ?? '',
-    email:     user?.email     ?? '',
-    phone:     user?.phone     ?? '',
-    bio:       user?.bio       ?? '',
-  })
-  const [avatar,         setAvatar]         = useState(user?.avatar ?? null)
-  const [avatarFile,     setAvatarFile]     = useState(null)
-  const [avatarPreview,  setAvatarPreview]  = useState(null)
-  const [saving,         setSaving]         = useState(false)
-  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+            <InputField label="Phone Number" value={form.phone}
+              onChange={e => setForm({ ...form, phone: e.target.value })}
+              placeholder="+91 98765 43210" type="tel" />
 
-  const initials = `${form.firstName?.[0] ?? ''}${form.lastName?.[0] ?? ''}`.toUpperCase()
-
-  const handleChange = e =>
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
-
-  const handleAvatarChange = e => {
-    const file = e.target.files[0]
-    if (!file) return
-    setAvatarFile(file)
-    setAvatarPreview(URL.createObjectURL(file))
-  }
-
-  const handleAvatarUpload = async () => {
-    if (!avatarFile) return
-    const fd = new FormData()
-    fd.append('avatar', avatarFile)
-
-    setUploadingAvatar(true)
-    try {
-      const { data } = await api.post('/student/profile/avatar', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      setAvatar(data.avatarUrl)
-      setAvatarPreview(null)
-      setAvatarFile(null)
-      updateUser({ avatar: data.avatarUrl })
-      toast.success('Avatar updated!')
-    } catch {
-      toast.error('Avatar upload failed')
-    } finally {
-      setUploadingAvatar(false)
-      if (fileRef.current) fileRef.current.value = ''
-    }
-  }
-
-  const handleSave = async e => {
-    e.preventDefault()
-    if (!form.firstName.trim() || !form.lastName.trim()) {
-      toast.error('First and last name are required')
-      return
-    }
-    setSaving(true)
-    try {
-      const { data } = await api.put('/student/profile', form)
-      updateUser(data.user)
-      toast.success('Profile updated!')
-    } catch (err) {
-      toast.error(err?.response?.data?.message ?? 'Update failed')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-
-      {/* Avatar section */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-        <h2 className="text-sm font-semibold text-gray-700 mb-4">Profile Picture</h2>
-        <div className="flex items-center gap-5 flex-wrap">
-
-          {/* Avatar display */}
-          <div className="relative shrink-0">
-            {avatarPreview || avatar ? (
-              <img
-                src={avatarPreview ?? avatar}
-                alt="avatar"
-                className="h-20 w-20 rounded-full object-cover border-2 border-indigo-200"
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '6px', letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+                Bio
+              </label>
+              <textarea
+                value={form.bio}
+                onChange={e => setForm({ ...form, bio: e.target.value.slice(0, 300) })}
+                placeholder="Tell your teachers a little about yourself..."
+                rows={4}
+                style={{
+                  width: '100%', padding: '11px 14px',
+                  background: '#fff', border: '1.5px solid #e2e8f0',
+                  borderRadius: '12px', fontSize: '14px', color: '#0f172a',
+                  resize: 'vertical', outline: 'none', fontFamily: 'inherit',
+                  boxSizing: 'border-box', lineHeight: 1.6, transition: 'border-color 0.2s'
+                }}
+                onFocus={e => e.target.style.borderColor = '#6366f1'}
+                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
               />
-            ) : (
-              <div className="h-20 w-20 rounded-full bg-indigo-600 flex items-center justify-center text-white text-2xl font-bold border-2 border-indigo-200">
-                {initials || '?'}
-              </div>
-            )}
-            {/* Camera overlay */}
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="absolute bottom-0 right-0 h-6 w-6 rounded-full bg-white border border-gray-200 shadow flex items-center justify-center text-gray-500 hover:bg-gray-50 text-xs"
-            >
-              ✎
-            </button>
-          </div>
+              <p style={{ fontSize: '11px', color: '#cbd5e1', textAlign: 'right', marginTop: '4px' }}>
+                {form.bio.length}/300
+              </p>
+            </div>
 
-          <div className="flex flex-col gap-2">
-            <p className="text-xs text-gray-400">JPG, PNG up to 5MB</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Choose Photo
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '4px' }}>
+              <button onClick={handleSaveInfo} disabled={saving} style={{
+                padding: '12px 28px',
+                background: saving ? '#c7d2fe' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                color: '#fff', border: 'none', borderRadius: '12px',
+                fontSize: '14px', fontWeight: '700', cursor: saving ? 'not-allowed' : 'pointer',
+                boxShadow: '0 4px 14px rgba(99,102,241,0.3)'
+              }}>
+                {saving ? 'Saving…' : 'Save Changes'}
               </button>
-              {avatarFile && (
-                <button
-                  onClick={handleAvatarUpload}
-                  disabled={uploadingAvatar}
-                  className="px-3 py-1.5 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-                >
-                  {uploadingAvatar ? 'Uploading…' : 'Upload'}
-                </button>
-              )}
             </div>
           </div>
+        )}
 
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            onChange={handleAvatarChange}
-          />
-        </div>
-      </div>
+        {tab === 'password' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{
+              background: '#eff6ff', border: '1px solid #bfdbfe',
+              borderRadius: '12px', padding: '14px 16px', marginBottom: '4px'
+            }}>
+              <p style={{ fontSize: '13px', color: '#2563eb' }}>
+                🔒 Use a strong password with at least 8 characters, including numbers and symbols.
+              </p>
+            </div>
 
-      {/* Info form */}
-      <form onSubmit={handleSave} className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-5">
-        <h2 className="text-sm font-semibold text-gray-700">Personal Information</h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field
-            label="First Name"
-            name="firstName"
-            value={form.firstName}
-            onChange={handleChange}
-            required
-          />
-          <Field
-            label="Last Name"
-            name="lastName"
-            value={form.lastName}
-            onChange={handleChange}
-            required
-          />
-        </div>
-
-        <Field
-          label="Email Address"
-          name="email"
-          type="email"
-          value={form.email}
-          onChange={handleChange}
-          required
-          disabled
-          hint="Email cannot be changed"
-        />
-
-        <Field
-          label="Phone Number"
-          name="phone"
-          type="tel"
-          value={form.phone}
-          onChange={handleChange}
-          placeholder="+91 98765 43210"
-        />
-
-        <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-700">Bio</label>
-          <textarea
-            name="bio"
-            value={form.bio}
-            onChange={handleChange}
-            rows={3}
-            maxLength={300}
-            placeholder="Tell your teachers a little about yourself…"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800
-              focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none placeholder-gray-300"
-          />
-          <p className="text-xs text-gray-400 text-right">{form.bio.length}/300</p>
-        </div>
-
-        <div className="flex justify-end pt-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-6 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium
-              hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-          >
-            {saving ? 'Saving…' : 'Save Changes'}
-          </button>
-        </div>
-      </form>
-    </div>
-  )
-}
-
-// ─── Change Password Tab ──────────────────────────────────────────────────────
-
-function ChangePasswordTab() {
-  const [form, setForm] = useState({
-    currentPassword: '',
-    newPassword:     '',
-    confirmPassword: '',
-  })
-  const [show,   setShow]   = useState({ current: false, new: false, confirm: false })
-  const [saving, setSaving] = useState(false)
-
-  const handleChange = e =>
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
-
-  const strength = passwordStrength(form.newPassword)
-
-  const handleSubmit = async e => {
-    e.preventDefault()
-    if (form.newPassword !== form.confirmPassword) {
-      toast.error('New passwords do not match')
-      return
-    }
-    if (form.newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters')
-      return
-    }
-    setSaving(true)
-    try {
-      await api.put('/student/profile/password', {
-        currentPassword: form.currentPassword,
-        newPassword:     form.newPassword,
-      })
-      toast.success('Password changed successfully!')
-      setForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
-    } catch (err) {
-      toast.error(err?.response?.data?.message ?? 'Password change failed')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-5">
-      <h2 className="text-sm font-semibold text-gray-700">Change Password</h2>
-
-      <PasswordField
-        label="Current Password"
-        name="currentPassword"
-        value={form.currentPassword}
-        onChange={handleChange}
-        show={show.current}
-        onToggle={() => setShow(s => ({ ...s, current: !s.current }))}
-        required
-      />
-
-      <PasswordField
-        label="New Password"
-        name="newPassword"
-        value={form.newPassword}
-        onChange={handleChange}
-        show={show.new}
-        onToggle={() => setShow(s => ({ ...s, new: !s.new }))}
-        required
-      />
-
-      {/* Strength indicator */}
-      {form.newPassword && (
-        <div className="space-y-1 -mt-2">
-          <div className="flex gap-1">
-            {[0, 1, 2, 3].map(i => (
-              <div
-                key={i}
-                className={`h-1 flex-1 rounded-full transition-colors
-                  ${i < strength.score
-                    ? strength.score <= 1 ? 'bg-red-400'
-                    : strength.score <= 2 ? 'bg-amber-400'
-                    : strength.score <= 3 ? 'bg-yellow-400'
-                    : 'bg-green-500'
-                    : 'bg-gray-100'
-                  }`}
-              />
+            {[
+              { key: 'current', label: 'Current Password' },
+              { key: 'newPass', label: 'New Password' },
+              { key: 'confirm', label: 'Confirm New Password' },
+            ].map(({ key, label }) => (
+              <div key={key}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '6px', letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+                  {label}
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPwd[key] ? 'text' : 'password'}
+                    value={passwords[key]}
+                    onChange={e => setPasswords({ ...passwords, [key]: e.target.value })}
+                    placeholder="••••••••"
+                    style={{
+                      width: '100%', padding: '11px 44px 11px 14px',
+                      background: '#fff', border: '1.5px solid #e2e8f0',
+                      borderRadius: '12px', fontSize: '14px', color: '#0f172a',
+                      outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+                      transition: 'border-color 0.2s'
+                    }}
+                    onFocus={e => e.target.style.borderColor = '#6366f1'}
+                    onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                  />
+                  <button type="button"
+                    onClick={() => setShowPwd(p => ({ ...p, [key]: !p[key] }))}
+                    style={{
+                      position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8',
+                      display: 'flex', alignItems: 'center'
+                    }}>
+                    {showPwd[key] ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.5"/><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5"/></svg>
+                    )}
+                  </button>
+                </div>
+              </div>
             ))}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '4px' }}>
+              <button onClick={handleChangePassword} disabled={saving || !passwords.current || !passwords.newPass || !passwords.confirm}
+                style={{
+                  padding: '12px 28px',
+                  background: (saving || !passwords.current || !passwords.newPass || !passwords.confirm) ? '#c7d2fe' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  color: '#fff', border: 'none', borderRadius: '12px',
+                  fontSize: '14px', fontWeight: '700',
+                  cursor: (saving || !passwords.current || !passwords.newPass || !passwords.confirm) ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 14px rgba(99,102,241,0.3)'
+                }}>
+                {saving ? 'Updating…' : 'Change Password'}
+              </button>
+            </div>
           </div>
-          <p className={`text-xs font-medium ${strength.color}`}>{strength.label}</p>
-        </div>
-      )}
-
-      <PasswordField
-        label="Confirm New Password"
-        name="confirmPassword"
-        value={form.confirmPassword}
-        onChange={handleChange}
-        show={show.confirm}
-        onToggle={() => setShow(s => ({ ...s, confirm: !s.confirm }))}
-        required
-      />
-
-      {/* Match indicator */}
-      {form.confirmPassword && (
-        <p className={`text-xs -mt-2 font-medium ${
-          form.newPassword === form.confirmPassword ? 'text-green-500' : 'text-red-400'
-        }`}>
-          {form.newPassword === form.confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
-        </p>
-      )}
-
-      <div className="flex justify-end pt-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className="px-6 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium
-            hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-        >
-          {saving ? 'Updating…' : 'Update Password'}
-        </button>
-      </div>
-    </form>
-  )
-}
-
-// ─── Shared sub-components ────────────────────────────────────────────────────
-
-function Field({ label, hint, disabled, ...props }) {
-  return (
-    <div className="space-y-1">
-      <label className="block text-sm font-medium text-gray-700">{label}</label>
-      <input
-        {...props}
-        disabled={disabled}
-        className={`w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800
-          focus:outline-none focus:ring-2 focus:ring-indigo-400 placeholder-gray-300
-          ${disabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''}`}
-      />
-      {hint && <p className="text-xs text-gray-400">{hint}</p>}
-    </div>
-  )
-}
-
-function PasswordField({ label, name, value, onChange, show, onToggle, required }) {
-  return (
-    <div className="space-y-1">
-      <label className="block text-sm font-medium text-gray-700">{label}</label>
-      <div className="relative">
-        <input
-          type={show ? 'text' : 'password'}
-          name={name}
-          value={value}
-          onChange={onChange}
-          required={required}
-          className="w-full rounded-lg border border-gray-200 px-3 py-2 pr-10 text-sm text-gray-800
-            focus:outline-none focus:ring-2 focus:ring-indigo-400"
-        />
-        <button
-          type="button"
-          onClick={onToggle}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
-        >
-          {show ? 'Hide' : 'Show'}
-        </button>
+        )}
       </div>
     </div>
   )
-}
-
-function passwordStrength(pwd) {
-  if (!pwd) return { score: 0, label: '', color: '' }
-  let score = 0
-  if (pwd.length >= 8)              score++
-  if (/[A-Z]/.test(pwd))           score++
-  if (/[0-9]/.test(pwd))           score++
-  if (/[^A-Za-z0-9]/.test(pwd))    score++
-  const map = [
-    { label: 'Too weak',  color: 'text-red-400'   },
-    { label: 'Weak',      color: 'text-red-400'   },
-    { label: 'Fair',      color: 'text-amber-500' },
-    { label: 'Good',      color: 'text-yellow-500'},
-    { label: 'Strong',    color: 'text-green-500' },
-  ]
-  return { score, ...map[score] }
 }
