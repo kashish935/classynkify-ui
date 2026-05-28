@@ -509,7 +509,7 @@ function ActivityTab({ student, courses, assignments }) {
     student.createdAt && {
       date: new Date(student.createdAt),
       icon: "🎉",
-      label: "Joined EduStream",
+      label: "Joined Classynkify",
       sub: null,
       color: "#F59E0B",
     },

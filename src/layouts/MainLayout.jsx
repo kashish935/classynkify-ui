@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom' // Fix 1a: added Outlet
 import { useAuth } from '../context/AuthContext'
 
+// Fix 2: updated all paths to /teacher/...
 const navItems = [
   {
     label: 'Dashboard',
-    path: '/dashboard',
+    path: '/teacher/dashboard',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
         <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.7"/>
@@ -17,7 +18,7 @@ const navItems = [
   },
   {
     label: 'My Courses',
-    path: '/my-courses',
+    path: '/teacher/courses',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
@@ -28,7 +29,7 @@ const navItems = [
   },
   {
     label: 'Students',
-    path: '/students',
+    path: '/teacher/students',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
@@ -40,7 +41,7 @@ const navItems = [
   },
   {
     label: 'Assignments',
-    path: '/assignments',
+    path: '/teacher/assignments',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.7"/>
@@ -51,7 +52,7 @@ const navItems = [
   },
   {
     label: 'Live Classes',
-    path: '/live',
+    path: '/teacher/live',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
         <polygon points="23 7 16 12 23 17 23 7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
@@ -62,7 +63,7 @@ const navItems = [
   },
   {
     label: 'Analytics',
-    path: '/analytics',
+    path: '/teacher/analytics',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
         <line x1="18" y1="20" x2="18" y2="10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
@@ -74,7 +75,13 @@ const navItems = [
   },
 ]
 
-const MainLayout = ({ children }) => {
+// Fix 4: dropdown items with paths
+const dropdownItems = [
+  { label: 'My Profile', icon: '👤', path: '/teacher/profile' },
+  { label: 'Settings',   icon: '⚙️', path: '/teacher/settings' },
+]
+
+const MainLayout = () => {
   const { user, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -277,7 +284,7 @@ const MainLayout = ({ children }) => {
               <span style={{ fontSize: '13px', color: '#94a3b8' }}>Classynkify</span>
               <span style={{ fontSize: '13px', color: '#cbd5e1' }}>/</span>
               <span style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a', textTransform: 'capitalize' }}>
-                {location.pathname.replace('/', '') || 'Dashboard'}
+                {location.pathname.replace('/teacher/', '') || 'Dashboard'}
               </span>
             </div>
           </div>
@@ -299,7 +306,6 @@ const MainLayout = ({ children }) => {
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
               </svg>
-              {/* Notification dot */}
               <div style={{
                 position: 'absolute', top: '8px', right: '8px',
                 width: '7px', height: '7px', borderRadius: '50%',
@@ -351,16 +357,17 @@ const MainLayout = ({ children }) => {
                     <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>{user?.email}</p>
                   </div>
 
-                  {[
-                    { label: 'My Profile', icon: '👤' },
-                    { label: 'Settings', icon: '⚙️' },
-                  ].map(item => (
-                    <button key={item.label} style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
-                      padding: '9px 12px', borderRadius: '8px', border: 'none',
-                      background: 'transparent', cursor: 'pointer', fontSize: '13px',
-                      color: '#374151', fontFamily: 'inherit', transition: 'all 0.15s'
-                    }}
+                  {/* Fix 4: dropdown items now navigate correctly */}
+                  {dropdownItems.map(item => (
+                    <button
+                      key={item.label}
+                      onClick={() => { navigate(item.path); setProfileOpen(false) }}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                        padding: '9px 12px', borderRadius: '8px', border: 'none',
+                        background: 'transparent', cursor: 'pointer', fontSize: '13px',
+                        color: '#374151', fontFamily: 'inherit', transition: 'all 0.15s'
+                      }}
                       onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
@@ -393,9 +400,9 @@ const MainLayout = ({ children }) => {
           </div>
         </header>
 
-        {/* ── Page Content ── */}
+        {/* ── Page Content ── Fix 1b: replaced {children} with <Outlet /> */}
         <main style={{ flex: 1, padding: '28px 28px', overflowY: 'auto' }}>
-          {children}
+          <Outlet />
         </main>
       </div>
 
