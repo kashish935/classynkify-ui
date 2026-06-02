@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import MainLayout from '../layouts/MainLayout'
 
 const mockCourse = {
   _id: '1', title: 'Mathematics — Grade 10', subject: 'mathematics',
@@ -227,7 +226,7 @@ const CourseDetail = () => {
   ]
 
   return (
-    <MainLayout>
+    <>
       <div style={{ maxWidth: '1000px', margin: '0 auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
         {/* Toast */}
@@ -585,7 +584,7 @@ const CourseDetail = () => {
       )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </MainLayout>
+    </>
   )
 }
 

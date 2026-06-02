@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import MainLayout from '../layouts/MainLayout'
 
 const mockCourses = [
   {
@@ -298,7 +297,7 @@ const MyCourses = () => {
   })
 
   return (
-    <MainLayout>
+   <>
       <div style={{ maxWidth: '1200px', margin: '0 auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
         {successMsg && (
@@ -421,11 +420,10 @@ const MyCourses = () => {
           </div>
         )}
       </div>
-
       {deleteTarget && (
         <DeleteModal course={deleteTarget} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)}/>
       )}
-    </MainLayout>
+  </>
   )
 }
 

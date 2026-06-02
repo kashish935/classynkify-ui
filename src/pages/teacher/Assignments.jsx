@@ -1,7 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import MainLayout from '../layouts/MainLayout'
-
 // ── Mock Data ──
 const mockAssignments = [
   {
@@ -750,7 +748,7 @@ const Assignments = () => {
     acc + a.submissions.filter(s => s.grade === null).length, 0)
 
   return (
-    <MainLayout>
+    <>
       <div style={{ maxWidth: '1100px', margin: '0 auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
         {/* Toast */}
@@ -921,7 +919,7 @@ const Assignments = () => {
           onGrade={() => {}}
         />
       )}
-    </MainLayout>
+    </>
   )
 }
 

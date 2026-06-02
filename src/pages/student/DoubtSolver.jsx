@@ -115,16 +115,37 @@ const TypingIndicator = () => (
 
 export default function DoubtSolver() {
   const { user } = useAuth()
-  const [messages, setMessages] = useState([])
+
+  // Unique storage key per user so multiple users don't share history
+  const STORAGE_KEY = `doubt_chat_${user?._id || 'guest'}`
+
+  // Load messages from localStorage on first mount
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
+
   const [input, setInput] = useState('')
   const [context, setContext] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
   const textareaRef = useRef(null)
 
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  // Persist messages to localStorage on every update
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages))
+    } catch { /* storage full or unavailable */ }
+  }, [messages])
 
   const send = async (text) => {
     const q = (text || input).trim()
@@ -160,7 +181,11 @@ export default function DoubtSolver() {
     }
   }
 
-  const clearChat = () => setMessages([])
+  // Clear state AND remove from localStorage
+  const clearChat = () => {
+    setMessages([])
+    localStorage.removeItem(STORAGE_KEY)
+  }
 
   return (
     <div style={{
