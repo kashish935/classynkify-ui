@@ -16,17 +16,19 @@ import Assignments   from './pages/student/Assignments'
 import Grades        from './pages/student/Grades'
 import Profile       from './pages/student/Profile'
 import DoubtSolver   from './pages/student/DoubtSolver'
+import CoursesPage   from './pages/student/CoursesPage'
 
 // Teacher
-import MainLayout       from './layouts/MainLayout'
-import TeacherDashboard from './pages/TeacherDashboard'
-import MyCourses        from './pages/MyCourses'
-import CreateCourse     from './pages/CreateCourse'
-import Students         from './pages/Students'
-import StudentDetail    from './pages/StudentDetail'
-import TeacherAssignments from './pages/Assignments'
-import TeacherProfile   from './pages/Profile'
-import Settings         from './pages/Settings'
+import TeacherLayout      from './layouts/TeacherLayout'
+import TeacherDashboard   from './pages/teacher/TeacherDashboard'
+import MyCourses          from './pages/teacher/MyCourses'
+import CreateCourse       from './pages/teacher/CreateCourse'
+import CourseDetail       from './pages/teacher/CourseDetail'
+import TeacherAssignments from './pages/teacher/Assignments'
+import TeacherProfile     from './pages/Profile'
+import Students           from './pages/Students'
+import StudentDetail      from './pages/StudentDetail'
+import Settings           from './pages/Settings'
 
 export default function App() {
   return (
@@ -52,6 +54,7 @@ export default function App() {
           >
             <Route index                    element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard"         element={<Dashboard />} />
+            <Route path="courses"           element={<CoursesPage />} />
             <Route path="courses/:courseId" element={<CoursePlayer />} />
             <Route path="assignments"       element={<Assignments />} />
             <Route path="grades"            element={<Grades />} />
@@ -64,7 +67,7 @@ export default function App() {
             path="/teacher"
             element={
               <PrivateRoute allowedRole="teacher">
-                <MainLayout />
+                <TeacherLayout />
               </PrivateRoute>
             }
           >
@@ -72,9 +75,10 @@ export default function App() {
             <Route path="dashboard"             element={<TeacherDashboard />} />
             <Route path="courses"               element={<MyCourses />} />
             <Route path="courses/create"        element={<CreateCourse />} />
+            <Route path="courses/:id"           element={<CourseDetail />} />
+            <Route path="assignments"           element={<TeacherAssignments />} />
             <Route path="students"              element={<Students />} />
             <Route path="students/:studentId"   element={<StudentDetail />} />
-            <Route path="assignments"           element={<TeacherAssignments />} />
             <Route path="profile"               element={<TeacherProfile />} />
             <Route path="settings"              element={<Settings />} />
           </Route>
@@ -83,8 +87,8 @@ export default function App() {
           <Route
             path="/unauthorized"
             element={
-              <div className="min-h-screen flex items-center justify-center">
-                <p className="text-red-500 text-lg">
+              <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <p style={{ color: '#ef4444', fontSize: '18px' }}>
                   ⛔ You are not authorized to view this page.
                 </p>
               </div>

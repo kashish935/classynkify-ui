@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import MainLayout from '../layouts/MainLayout'
-import api from '../services/api'
+import api from '../../services/api'
 
 const SUBJECTS = [
   { value: 'mathematics', label: 'Mathematics', emoji: '📐' },
@@ -78,7 +77,7 @@ const CreateCourse = () => {
   const selectedSubject = SUBJECTS.find(s => s.value === formData.subject)
 
   return (
-    <MainLayout>
+    <>
       <div style={{ maxWidth: '900px', margin: '0 auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
         {/* Header */}
@@ -369,7 +368,7 @@ const CreateCourse = () => {
         </div>
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </MainLayout>
+    </>
   )
 }
 

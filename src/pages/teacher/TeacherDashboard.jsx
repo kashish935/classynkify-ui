@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import MainLayout from '../layouts/MainLayout'
+import { useAuth } from '../../context/AuthContext'
 
 // ── Mock data (replace with API calls once backend is ready) ──
 const mockStats = {
@@ -106,30 +105,9 @@ const ActivityDot = ({ type }) => {
 const TeacherDashboard = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [stats, setStats] = useState(mockStats)
-  const [courses, setCourses] = useState(mockCourses)
-  const [activity, setActivity] = useState(mockActivity)
-  const [loading, setLoading] = useState(false)
-
-  // 🔁 When backend is ready, replace this with real API calls:
-  // useEffect(() => {
-  //   const fetchDashboard = async () => {
-  //     setLoading(true)
-  //     try {
-  //       const [statsRes, coursesRes] = await Promise.all([
-  //         api.get('/teacher/stats'),
-  //         api.get('/courses/my'),
-  //       ])
-  //       setStats(statsRes.data)
-  //       setCourses(coursesRes.data)
-  //     } catch (err) {
-  //       console.error(err)
-  //     } finally {
-  //       setLoading(false)
-  //     }
-  //   }
-  //   fetchDashboard()
-  // }, [])
+  const [stats] = useState(mockStats)
+  const [courses] = useState(mockCourses)
+  const [activity] = useState(mockActivity)
 
   const getGreeting = () => {
     const h = new Date().getHours()
@@ -198,179 +176,167 @@ const TeacherDashboard = () => {
     },
   ]
 
+  // ── NO <MainLayout> wrapper — TeacherLayout in the router handles the shell ──
   return (
-    <MainLayout>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
-        {/* ── Page Header ── */}
+      {/* ── Page Header ── */}
+      <div style={{
+        display: 'flex', alignItems: 'flex-start',
+        justifyContent: 'space-between', marginBottom: '28px',
+        flexWrap: 'wrap', gap: '16px'
+      }}>
+        <div>
+          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>
+            {getGreeting()}, {firstName} 👋
+          </h1>
+          <p style={{ fontSize: '13px', color: '#64748b' }}>
+            Here's what's happening in your classroom today.
+          </p>
+        </div>
+        <button
+          onClick={() => navigate('/teacher/courses/create')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '10px 20px',
+            background: 'linear-gradient(135deg, #0d9488, #0891b2)',
+            color: 'white', border: 'none', borderRadius: '12px',
+            fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+            boxShadow: '0 4px 14px rgba(13,148,136,0.3)',
+            fontFamily: 'inherit', transition: 'all 0.2s'
+          }}
+          onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 20px rgba(13,148,136,0.45)'}
+          onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 14px rgba(13,148,136,0.3)'}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <line x1="12" y1="5" x2="12" y2="19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+            <line x1="5" y1="12" x2="19" y2="12" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+          </svg>
+          Create New Course
+        </button>
+      </div>
+
+      {/* ── Stat Cards ── */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '16px',
+        marginBottom: '24px'
+      }}>
+        {statCards.map(s => <StatCard key={s.label} {...s} />)}
+      </div>
+
+      {/* ── Bottom Grid ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '20px' }}>
+
+        {/* ── Courses Table ── */}
         <div style={{
-          display: 'flex', alignItems: 'flex-start',
-          justifyContent: 'space-between', marginBottom: '28px',
-          flexWrap: 'wrap', gap: '16px'
+          background: 'white', borderRadius: '16px',
+          border: '1px solid #e2e8f0', overflow: 'hidden'
         }}>
-          <div>
-            <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>
-              {getGreeting()}, {firstName} 👋
-            </h1>
-            <p style={{ fontSize: '13px', color: '#64748b' }}>
-              Here's what's happening in your classroom today.
-            </p>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '18px 22px', borderBottom: '1px solid #f1f5f9'
+          }}>
+            <div>
+              <h2 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '2px' }}>
+                My Courses
+              </h2>
+              <p style={{ fontSize: '12px', color: '#94a3b8' }}>
+                {courses.length} courses this semester
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/teacher/courses')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '4px',
+                fontSize: '12px', fontWeight: '600', color: '#0d9488',
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontFamily: 'inherit', padding: 0
+              }}
+            >
+              View all
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                <polyline points="9 18 15 12 9 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
           </div>
-          <button
-            onClick={() => navigate('/create-course')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '10px 20px',
-              background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-              color: 'white', border: 'none', borderRadius: '12px',
-              fontSize: '13px', fontWeight: '600', cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(37,99,235,0.3)',
-              fontFamily: 'inherit', transition: 'all 0.2s'
-            }}
-            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 20px rgba(37,99,235,0.45)'}
-            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 14px rgba(37,99,235,0.3)'}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-              <line x1="12" y1="5" x2="12" y2="19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-              <line x1="5" y1="12" x2="19" y2="12" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-            </svg>
-            Create New Course
-          </button>
+
+          {courses.map((course, i) => (
+            <CourseRow key={course.id} course={course} isLast={i === courses.length - 1} />
+          ))}
         </div>
 
-        {/* ── Stat Cards ── */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '16px',
-          marginBottom: '24px'
-        }}>
-          {statCards.map(s => <StatCard key={s.label} {...s} />)}
-        </div>
+        {/* ── Right Column ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-        {/* ── Bottom Grid ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '20px' }}>
-
-          {/* ── Courses Table ── */}
+          {/* Quick Actions */}
           <div style={{
             background: 'white', borderRadius: '16px',
-            border: '1px solid #e2e8f0', overflow: 'hidden'
+            border: '1px solid #e2e8f0', padding: '18px'
           }}>
-            {/* Header */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '18px 22px', borderBottom: '1px solid #f1f5f9'
-            }}>
-              <div>
-                <h2 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '2px' }}>
-                  My Courses
-                </h2>
-                <p style={{ fontSize: '12px', color: '#94a3b8' }}>
-                  {courses.length} courses this semester
-                </p>
-              </div>
-              <button
-                onClick={() => navigate('/my-courses')}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '4px',
-                  fontSize: '12px', fontWeight: '600', color: '#2563eb',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  fontFamily: 'inherit', padding: 0
-                }}
-              >
-                View all
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                  <polyline points="9 18 15 12 9 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
+            <h2 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>
+              Quick Actions
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {[
+                { label: 'Upload New Lecture', color: '#0d9488', bg: '#f0fdfa', border: '#ccfbf1', onClick: () => navigate('/teacher/courses') },
+                { label: 'Create Assignment', color: '#2563eb', bg: '#eff6ff', border: '#dbeafe', onClick: () => navigate('/teacher/assignments') },
+                { label: 'Schedule Live Class', color: '#8b5cf6', bg: '#f5f3ff', border: '#ede9fe', soon: true },
+              ].map(a => (
+                <QuickAction key={a.label} {...a} />
+              ))}
             </div>
-
-            {/* Course rows */}
-            {courses.map((course, i) => (
-              <CourseRow
-                key={course.id}
-                course={course}
-                isLast={i === courses.length - 1}
-              />
-            ))}
           </div>
 
-          {/* ── Right Column ── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-            {/* Quick Actions */}
-            <div style={{
-              background: 'white', borderRadius: '16px',
-              border: '1px solid #e2e8f0', padding: '18px'
-            }}>
-              <h2 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>
-                Quick Actions
+          {/* Activity Feed */}
+          <div style={{
+            background: 'white', borderRadius: '16px',
+            border: '1px solid #e2e8f0', padding: '18px', flex: 1
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <h2 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>
+                Recent Activity
               </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {[
-                  { label: 'Upload New Lecture', color: '#2563eb', bg: '#eff6ff', border: '#dbeafe', onClick: () => navigate('/my-courses') },
-                  { label: 'Create Assignment', color: '#0d9488', bg: '#f0fdfa', border: '#ccfbf1', onClick: () => navigate('/assignments') },
-                  { label: 'Schedule Live Class', color: '#8b5cf6', bg: '#f5f3ff', border: '#ede9fe', soon: true },
-                ].map(a => (
-                  <QuickAction key={a.label} {...a} />
-                ))}
-              </div>
+              <span style={{
+                fontSize: '10px', fontWeight: '700',
+                background: '#fef2f2', color: '#ef4444',
+                padding: '3px 8px', borderRadius: '999px',
+                display: 'flex', alignItems: 'center', gap: '4px'
+              }}>
+                <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#ef4444', display: 'inline-block' }}/>
+                Live
+              </span>
             </div>
 
-            {/* Activity Feed */}
-            <div style={{
-              background: 'white', borderRadius: '16px',
-              border: '1px solid #e2e8f0', padding: '18px', flex: 1
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <h2 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>
-                  Recent Activity
-                </h2>
-                <span style={{
-                  fontSize: '10px', fontWeight: '700',
-                  background: '#fef2f2', color: '#ef4444',
-                  padding: '3px 8px', borderRadius: '999px',
-                  display: 'flex', alignItems: 'center', gap: '4px'
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {activity.map((a, i) => (
+                <div key={a.id} style={{
+                  display: 'flex', gap: '10px', paddingTop: '10px', paddingBottom: '10px',
+                  borderBottom: i < activity.length - 1 ? '1px solid #f8fafc' : 'none'
                 }}>
-                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#ef4444', display: 'inline-block' }}/>
-                  Live
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {activity.map((a, i) => (
-                  <div key={a.id} style={{
-                    display: 'flex', gap: '10px', paddingTop: '10px', paddingBottom: '10px',
-                    borderBottom: i < activity.length - 1 ? '1px solid #f8fafc' : 'none'
-                  }}>
-                    <ActivityDot type={a.type} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5', marginBottom: '2px' }}>
-                        {a.text}
-                      </p>
-                      <p style={{ fontSize: '11px', color: '#94a3b8' }}>{a.time}</p>
-                    </div>
+                  <ActivityDot type={a.type} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5', marginBottom: '2px' }}>
+                      {a.text}
+                    </p>
+                    <p style={{ fontSize: '11px', color: '#94a3b8' }}>{a.time}</p>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-
           </div>
+
         </div>
       </div>
-    </MainLayout>
+    </div>
   )
 }
 
-// ── Course Row Component ──
+// ── Course Row ──
 const CourseRow = ({ course, isLast }) => {
   const [hovered, setHovered] = useState(false)
-
-  const progressColor = course.completion >= 75
-    ? '#0d9488'
-    : course.completion >= 50
-    ? '#2563eb'
-    : '#f59e0b'
+  const progressColor = course.completion >= 75 ? '#0d9488' : course.completion >= 50 ? '#2563eb' : '#f59e0b'
 
   return (
     <div
@@ -384,17 +350,15 @@ const CourseRow = ({ course, isLast }) => {
         transition: 'background 0.15s'
       }}
     >
-      {/* Icon */}
       <div style={{
         width: '42px', height: '42px', borderRadius: '12px',
-        background: '#f0f9ff', display: 'flex',
+        background: '#f0fdfa', display: 'flex',
         alignItems: 'center', justifyContent: 'center',
         fontSize: '20px', flexShrink: 0
       }}>
         {course.subject}
       </div>
 
-      {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
           <p style={{
@@ -413,22 +377,15 @@ const CourseRow = ({ course, isLast }) => {
           </span>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-            {course.students} students
-          </span>
-          <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-            {course.lectures} lectures
-          </span>
+          <span style={{ fontSize: '11px', color: '#94a3b8' }}>{course.students} students</span>
+          <span style={{ fontSize: '11px', color: '#94a3b8' }}>{course.lectures} lectures</span>
         </div>
       </div>
 
-      {/* Progress */}
       <div style={{ width: '90px', flexShrink: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
           <span style={{ fontSize: '10px', color: '#94a3b8' }}>Progress</span>
-          <span style={{ fontSize: '10px', fontWeight: '600', color: '#0f172a' }}>
-            {course.completion}%
-          </span>
+          <span style={{ fontSize: '10px', fontWeight: '600', color: '#0f172a' }}>{course.completion}%</span>
         </div>
         <div style={{ height: '4px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
           <div style={{
@@ -439,7 +396,6 @@ const CourseRow = ({ course, isLast }) => {
         </div>
       </div>
 
-      {/* Manage button */}
       <ManageButton />
     </div>
   )
@@ -453,10 +409,10 @@ const ManageButton = () => {
       onMouseLeave={() => setHovered(false)}
       style={{
         padding: '6px 14px', borderRadius: '8px', flexShrink: 0,
-        border: hovered ? '1px solid #2563eb' : '1px solid #e2e8f0',
-        background: hovered ? '#eff6ff' : 'white',
+        border: hovered ? '1px solid #0d9488' : '1px solid #e2e8f0',
+        background: hovered ? '#f0fdfa' : 'white',
         fontSize: '12px', fontWeight: '500',
-        color: hovered ? '#2563eb' : '#374151',
+        color: hovered ? '#0d9488' : '#374151',
         cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s'
       }}
     >
@@ -476,7 +432,7 @@ const QuickAction = ({ label, color, bg, border, soon, onClick }) => {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '11px 14px', borderRadius: '10px', width: '100%',
         border: `1px solid ${hovered ? color : border}`,
-        background: hovered ? bg : bg,
+        background: bg,
         cursor: soon ? 'default' : 'pointer',
         fontFamily: 'inherit', transition: 'all 0.15s',
         opacity: soon ? 0.6 : 1
