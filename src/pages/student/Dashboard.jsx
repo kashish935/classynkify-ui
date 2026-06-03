@@ -252,7 +252,9 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import axiosInstance from '../../api/axiosInstance'
-import { MOCK_STUDENT_DASHBOARD } from '../../data/staticData'
+import { MOCK_STUDENT_DASHBOARD, MOCK_BROWSE_COURSES } from '../../data/staticData'
+
+const ENROLLED_STORAGE_KEY = 'classynkify_enrolled_ids'
 
 const StatCard = ({ icon, label, value, sub, color }) => (
   <div style={{
@@ -368,9 +370,35 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Read locally-enrolled course IDs (set by CoursesPage)
+    let localIds
+    try {
+      const stored = localStorage.getItem(ENROLLED_STORAGE_KEY)
+      localIds = stored ? new Set(JSON.parse(stored)) : new Set(['c1', 'c2', 'c3', 'c5'])
+    } catch {
+      localIds = new Set(['c1', 'c2', 'c3', 'c5'])
+    }
+
     axiosInstance.get('/student/dashboard')
-      .then(res => setData(res.data))
-      .catch(() => setData(MOCK_STUDENT_DASHBOARD))  // ← static fallback
+      .then(res => {
+        const apiData = res.data
+        if (apiData?.enrolledCourses?.length || apiData?.courses?.length) {
+          setData(apiData)
+        } else {
+          // API returned empty — build from local enrollments
+          const enrolledCourses = MOCK_BROWSE_COURSES
+            .filter(c => localIds.has(c._id))
+            .map(c => ({ ...c, instructor: c.teacher?.name || 'Ananya Kapoor' }))
+          setData({ ...MOCK_STUDENT_DASHBOARD, enrolledCourses })
+        }
+      })
+      .catch(() => {
+        // API unreachable — build from local enrollments
+        const enrolledCourses = MOCK_BROWSE_COURSES
+          .filter(c => localIds.has(c._id))
+          .map(c => ({ ...c, instructor: c.teacher?.name || 'Ananya Kapoor' }))
+        setData({ ...MOCK_STUDENT_DASHBOARD, enrolledCourses })
+      })
       .finally(() => setLoading(false))
   }, [])
 

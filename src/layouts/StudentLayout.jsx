@@ -1,4 +1,6 @@
+import { useState, useEffect, useRef } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { MOCK_NOTIFICATIONS } from '../data/staticData'
 import { useAuth } from '../context/AuthContext'
 
 const NAV_ITEMS = [
@@ -85,6 +87,31 @@ export default function StudentLayout() {
 
   const initials = user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?'
   const firstName = user?.name?.split(' ')[0] || 'Student'
+
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS)
+  const notifRef = useRef(null)
+  const unreadCount = notifications.filter(n => !n.read).length
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setNotifOpen(false)
+        setSelectedNotif(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const [selectedNotif, setSelectedNotif] = useState(null)
+  const markAllRead = () => setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+  const markRead = (id) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+  const openNotif = (n) => { markRead(n.id); setSelectedNotif(n) }
+  const closeDetail = () => setSelectedNotif(null)
+
+  // Type colours for notification detail
+  const TYPE_COLORS = { assignment: '#f59e0b', grade: '#10b981', course: '#6366f1', announcement: '#ef4444' }
 
   if (isCoursePlayer) {
     return (
@@ -253,23 +280,136 @@ export default function StudentLayout() {
 
           {/* Right: notifications + profile */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {/* Bell */}
-            <button style={{
-              width: '38px', height: '38px', borderRadius: '10px',
-              border: '1px solid #e8ecf0', background: 'white',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: '#64748b', position: 'relative'
-            }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-              </svg>
-              <div style={{
-                position: 'absolute', top: '8px', right: '8px',
-                width: '7px', height: '7px', borderRadius: '50%',
-                background: '#6366f1', border: '1.5px solid white'
-              }}/>
-            </button>
+            {/* Bell with dropdown */}
+            <div ref={notifRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setNotifOpen(o => !o)}
+                style={{
+                  width: '38px', height: '38px', borderRadius: '10px',
+                  border: notifOpen ? '1px solid #c7d2fe' : '1px solid #e8ecf0',
+                  background: notifOpen ? '#eef2ff' : 'white',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: notifOpen ? '#6366f1' : '#64748b',
+                  position: 'relative', transition: 'all 0.15s'
+                }}
+                onMouseEnter={e => { if (!notifOpen) { e.currentTarget.style.background = '#f5f3ff'; e.currentTarget.style.borderColor = '#c7d2fe' } }}
+                onMouseLeave={e => { if (!notifOpen) { e.currentTarget.style.background = 'white'; e.currentTarget.style.borderColor = '#e8ecf0' } }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+                </svg>
+                {unreadCount > 0 && (
+                  <div style={{
+                    position: 'absolute', top: '6px', right: '6px',
+                    minWidth: '16px', height: '16px', borderRadius: '999px',
+                    background: '#ef4444', border: '2px solid white',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '9px', fontWeight: '800', color: '#fff',
+                    padding: '0 3px', lineHeight: 1,
+                  }}>{unreadCount}</div>
+                )}
+              </button>
+
+              {/* Notification dropdown */}
+              {notifOpen && (
+                <div style={{ position: 'absolute', top: '46px', right: 0, width: '360px', background: '#fff', borderRadius: '16px', border: '1px solid #e8ecf0', boxShadow: '0 8px 32px rgba(0,0,0,0.14)', zIndex: 100, overflow: 'hidden', animation: 'notifSlide 0.15s ease' }}>
+                  <style>{`@keyframes notifSlide { from { opacity:0; transform:translateY(-8px) } to { opacity:1; transform:translateY(0) } } @keyframes detailPop { from { opacity:0; transform:translateX(16px) } to { opacity:1; transform:translateX(0) } }`}</style>
+
+                  {/* ── Detail view ── */}
+                  {selectedNotif ? (
+                    <div style={{ animation: 'detailPop 0.18s ease' }}>
+                      {/* Detail header */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                        <button onClick={closeDetail} style={{ width: '28px', height: '28px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#475569" strokeWidth="2" strokeLinecap="round"/></svg>
+                        </button>
+                        <span style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>Notification Detail</span>
+                      </div>
+
+                      {/* Detail body */}
+                      <div style={{ padding: '20px' }}>
+                        {/* Icon + type strip */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                          <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: (TYPE_COLORS[selectedNotif.type] || '#6366f1') + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', flexShrink: 0 }}>
+                            {selectedNotif.icon}
+                          </div>
+                          <div>
+                            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', color: TYPE_COLORS[selectedNotif.type] || '#6366f1', display: 'block', marginBottom: '3px' }}>{selectedNotif.type}</span>
+                            <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>{selectedNotif.title}</h3>
+                          </div>
+                        </div>
+
+                        {/* Message card */}
+                        <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px 16px', marginBottom: '14px', border: '1px solid #f1f5f9' }}>
+                          <p style={{ fontSize: '14px', color: '#334155', lineHeight: 1.6, margin: 0 }}>{selectedNotif.message}</p>
+                        </div>
+
+                        {/* Time */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#94a3b8" strokeWidth="2"/><path d="M12 6v6l4 2" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"/></svg>
+                          <span style={{ fontSize: '12px', color: '#94a3b8' }}>{selectedNotif.time}</span>
+                          <span style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: '600', color: '#22c55e', background: '#f0fdf4', padding: '2px 8px', borderRadius: '999px' }}>✓ Read</span>
+                        </div>
+                      </div>
+
+                      {/* Footer */}
+                      <div style={{ padding: '12px 16px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: '8px' }}>
+                        <button onClick={closeDetail} style={{ flex: 1, padding: '9px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+                          ← Back
+                        </button>
+                        <button onClick={() => { closeDetail(); setNotifOpen(false) }} style={{ flex: 1, padding: '9px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+                          Done
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ── List view ── */
+                    <>
+                      {/* Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>Notifications</span>
+                          {unreadCount > 0 && <span style={{ background: '#6366f1', color: '#fff', fontSize: '10px', fontWeight: '700', borderRadius: '999px', padding: '1px 7px' }}>{unreadCount} new</span>}
+                        </div>
+                        {unreadCount > 0 && <button onClick={markAllRead} style={{ fontSize: '11px', color: '#6366f1', fontWeight: '600', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Mark all read</button>}
+                      </div>
+
+                      {/* List */}
+                      <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+                        {notifications.map(n => (
+                          <div key={n.id} onClick={() => openNotif(n)}
+                            style={{ display: 'flex', gap: '12px', padding: '12px 16px', borderBottom: '1px solid #f8fafc', cursor: 'pointer', background: n.read ? '#fff' : '#fafaff', transition: 'background 0.15s' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#f5f3ff'}
+                            onMouseLeave={e => e.currentTarget.style.background = n.read ? '#fff' : '#fafaff'}
+                          >
+                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: (TYPE_COLORS[n.type] || '#6366f1') + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                              {n.icon}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                                <p style={{ fontSize: '13px', fontWeight: n.read ? '500' : '700', color: '#0f172a', margin: 0 }}>{n.title}</p>
+                                {!n.read && <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#6366f1', flexShrink: 0, marginTop: '4px' }}/>}
+                              </div>
+                              <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 3px', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.message}</p>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>{n.time}</p>
+                                <span style={{ fontSize: '10px', color: '#6366f1', fontWeight: '600' }}>View →</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Footer */}
+                      <div style={{ padding: '10px 16px', borderTop: '1px solid #f1f5f9', textAlign: 'center' }}>
+                        <button onClick={() => setNotifOpen(false)} style={{ fontSize: '12px', color: '#6366f1', fontWeight: '600', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Close</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Avatar + name — clicks to profile */}
             <button

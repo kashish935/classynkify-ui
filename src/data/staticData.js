@@ -126,6 +126,60 @@ export const MOCK_COURSES = [
     progress: 30,
     enrolledAt: '2026-02-01',
   },
+  {
+    _id: 'c6',
+    title: 'Biology — Grade 11',
+    subject: 'science',
+    grade: 'Grade 11',
+    language: 'English',
+    duration: '12 weeks',
+    description: 'Cells, genetics, human physiology, and ecosystems. Covers all major topics for board exams and Olympiad prep.',
+    status: 'active',
+    students: Array(34).fill(null),
+    lectures: [],
+    thumbnail: '',
+    color: 'linear-gradient(135deg, #16a34a, #15803d)',
+    emoji: '🧬',
+    instructor: 'Ananya Kapoor',
+    progress: 0,
+    enrolledAt: null,
+  },
+  {
+    _id: 'c7',
+    title: 'Web Development Basics',
+    subject: 'programming',
+    grade: 'Grade 12',
+    language: 'English',
+    duration: '10 weeks',
+    description: 'HTML, CSS, and JavaScript from scratch. Build real-world web pages and understand browser fundamentals.',
+    status: 'active',
+    students: Array(47).fill(null),
+    lectures: [],
+    thumbnail: '',
+    color: 'linear-gradient(135deg, #f97316, #ea580c)',
+    emoji: '🌐',
+    instructor: 'Ananya Kapoor',
+    progress: 0,
+    enrolledAt: null,
+  },
+  {
+    _id: 'c8',
+    title: 'Environmental Science',
+    subject: 'science',
+    grade: 'Grade 9',
+    language: 'English',
+    duration: '8 weeks',
+    description: 'Climate change, biodiversity, pollution and sustainable development. Perfect for general studies and awareness.',
+    status: 'active',
+    students: Array(19).fill(null),
+    lectures: [],
+    thumbnail: '',
+    color: 'linear-gradient(135deg, #0d9488, #0f766e)',
+    emoji: '🌍',
+    instructor: 'Ananya Kapoor',
+    progress: 0,
+    enrolledAt: null,
+  },
 ]
 
 // Lessons helpers (avoids circular reference with MOCK_COURSES)
@@ -420,7 +474,7 @@ export const MOCK_GRADES = [
 
 // Courses the logged-in student (Rohan) is enrolled in
 export const MOCK_STUDENT_ENROLLED_COURSES = MOCK_COURSES.filter(c =>
-  ['c1', 'c2'].includes(c._id)
+  ['c1', 'c2', 'c3', 'c5'].includes(c._id)
 )
 
 export const MOCK_STUDENT_DASHBOARD = {
@@ -471,3 +525,162 @@ export function getMockStudentDetail(studentId) {
       .slice(0, 3),
   }
 }
+
+// ─────────────────────────────────────────────────────────────
+//  BROWSE COURSES (full catalog for the Courses page)
+//  These mirror MOCK_COURSES but use the shape CoursesPage expects
+//  (with .teacher, .price, .category, .enrolledStudents, .lessons)
+// ─────────────────────────────────────────────────────────────
+
+export const MOCK_BROWSE_COURSES = [
+  {
+    _id: 'c1',
+    title: 'Mathematics — Grade 10',
+    description: 'Comprehensive algebra, geometry, and trigonometry. Builds a strong foundation for competitive exams.',
+    category: 'Mathematics',
+    teacher: { name: 'Ananya Kapoor' },
+    lessons: Array(12).fill(null),
+    enrolledStudents: Array(38).fill(null),
+    price: 0,
+    isFree: true,
+    thumbnail: '',
+    color: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+    emoji: '📐',
+  },
+  {
+    _id: 'c2',
+    title: 'Physics Fundamentals',
+    description: 'Core physics — mechanics, waves, thermodynamics, optics and electrostatics.',
+    category: 'Physics',
+    teacher: { name: 'Ananya Kapoor' },
+    lessons: Array(8).fill(null),
+    enrolledStudents: Array(29).fill(null),
+    price: 0,
+    isFree: true,
+    thumbnail: '',
+  },
+  {
+    _id: 'c3',
+    title: 'English Literature',
+    description: 'Classic and modern literature through critical analysis and creative writing techniques.',
+    category: 'General',
+    teacher: { name: 'Ananya Kapoor' },
+    lessons: Array(5).fill(null),
+    enrolledStudents: Array(41).fill(null),
+    price: 0,
+    isFree: true,
+    thumbnail: '',
+  },
+  {
+    _id: 'c4',
+    title: 'Chemistry Basics',
+    description: 'Atoms, molecules, the periodic table and fundamental chemical reactions for Grade 9.',
+    category: 'Science',
+    teacher: { name: 'Ananya Kapoor' },
+    lessons: Array(7).fill(null),
+    enrolledStudents: Array(15).fill(null),
+    price: 0,
+    isFree: true,
+    thumbnail: '',
+  },
+  {
+    _id: 'c5',
+    title: 'Computer Science — Grade 12',
+    description: 'Data structures, algorithms, OOP and programming fundamentals for board and competitive exams.',
+    category: 'Programming',
+    teacher: { name: 'Ananya Kapoor' },
+    lessons: Array(6).fill(null),
+    enrolledStudents: Array(22).fill(null),
+    price: 0,
+    isFree: true,
+    thumbnail: '',
+  },
+  {
+    _id: 'c6',
+    title: 'Biology — Grade 11',
+    description: 'Cells, genetics, human physiology and ecosystems. Board exam and Olympiad preparation.',
+    category: 'Science',
+    teacher: { name: 'Ananya Kapoor' },
+    lessons: Array(10).fill(null),
+    enrolledStudents: Array(34).fill(null),
+    price: 0,
+    isFree: true,
+    thumbnail: '',
+  },
+  {
+    _id: 'c7',
+    title: 'Web Development Basics',
+    description: 'HTML, CSS and JavaScript from scratch. Build real-world web pages and understand browser fundamentals.',
+    category: 'Programming',
+    teacher: { name: 'Ananya Kapoor' },
+    lessons: Array(9).fill(null),
+    enrolledStudents: Array(47).fill(null),
+    price: 0,
+    isFree: true,
+    thumbnail: '',
+  },
+  {
+    _id: 'c8',
+    title: 'Environmental Science',
+    description: 'Climate change, biodiversity, pollution and sustainable development for general studies.',
+    category: 'Science',
+    teacher: { name: 'Ananya Kapoor' },
+    lessons: Array(6).fill(null),
+    enrolledStudents: Array(19).fill(null),
+    price: 0,
+    isFree: true,
+    thumbnail: '',
+  },
+]
+
+// ─────────────────────────────────────────────────────────────
+//  NOTIFICATIONS
+// ─────────────────────────────────────────────────────────────
+
+export const MOCK_NOTIFICATIONS = [
+  {
+    id: 'n1',
+    type: 'assignment',
+    title: 'Assignment Due Soon',
+    message: 'Algebra Problem Set 1 is due on June 15.',
+    time: '2 hours ago',
+    read: false,
+    icon: '📋',
+  },
+  {
+    id: 'n2',
+    type: 'grade',
+    title: 'Grade Posted',
+    message: 'You scored 85/100 on Mid-Term: Linear Equations.',
+    time: '1 day ago',
+    read: false,
+    icon: '🎯',
+  },
+  {
+    id: 'n3',
+    type: 'course',
+    title: 'New Lesson Available',
+    message: 'Lesson 9 — Heights and Distances added to Mathematics.',
+    time: '2 days ago',
+    read: true,
+    icon: '📚',
+  },
+  {
+    id: 'n4',
+    type: 'announcement',
+    title: 'Class Announcement',
+    message: 'Physics lab session rescheduled to Friday 10 AM.',
+    time: '3 days ago',
+    read: true,
+    icon: '📢',
+  },
+  {
+    id: 'n5',
+    type: 'grade',
+    title: 'Assignment Graded',
+    message: "Newton's Laws Lab Report graded — check your feedback.",
+    time: '4 days ago',
+    read: true,
+    icon: '✅',
+  },
+]
