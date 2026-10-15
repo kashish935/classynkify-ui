@@ -1,0 +1,106 @@
+/* Light / dark theme.
+   Most of the app is styled inline with a fixed colour palette, so in dark mode
+   we remap those exact colours here. */
+
+html[data-theme="light"],
+html[data-theme="light"] body {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+html[data-theme="dark"],
+html[data-theme="dark"] body {
+  background: #0b1120;
+  color: #e2e8f0;
+}
+
+/* ── Page background ── */
+html[data-theme="dark"] :is(
+  [style*="background: rgb(241, 245, 249)"],
+  [style*="background-color: rgb(241, 245, 249)"]
+) { background-color: #0b1120 !important; }
+
+/* ── Cards, sidebars, headers ── */
+html[data-theme="dark"] :is(
+  [style*="background: rgb(255, 255, 255)"],
+  [style*="background-color: rgb(255, 255, 255)"]
+) { background-color: #111827 !important; }
+
+/* ── Inputs and subtle surfaces ── */
+html[data-theme="dark"] :is(
+  [style*="background: rgb(248, 250, 252)"],
+  [style*="background-color: rgb(248, 250, 252)"],
+  [style*="background: rgb(249, 250, 251)"],
+  [style*="background-color: rgb(249, 250, 251)"],
+  [style*="background: rgb(243, 244, 246)"],
+  [style*="background-color: rgb(243, 244, 246)"]
+) { background-color: #1f2937 !important; }
+
+/* ── Disabled buttons, progress tracks ── */
+html[data-theme="dark"] :is(
+  [style*="background: rgb(226, 232, 240)"],
+  [style*="background-color: rgb(226, 232, 240)"]
+) { background-color: #334155 !important; }
+
+/* ── Tinted surfaces ── */
+html[data-theme="dark"] :is(
+  [style*="background: rgb(239, 246, 255)"],
+  [style*="background-color: rgb(239, 246, 255)"]
+) { background-color: #172554 !important; }
+
+html[data-theme="dark"] :is(
+  [style*="background: rgb(238, 242, 255)"],
+  [style*="background-color: rgb(238, 242, 255)"]
+) { background-color: #1e1b4b !important; }
+
+html[data-theme="dark"] :is(
+  [style*="background: rgb(254, 242, 242)"],
+  [style*="background-color: rgb(254, 242, 242)"]
+) { background-color: #3b1219 !important; }
+
+html[data-theme="dark"] :is(
+  [style*="background: rgb(240, 253, 244)"],
+  [style*="background-color: rgb(240, 253, 244)"]
+) { background-color: #052e16 !important; }
+
+html[data-theme="dark"] :is(
+  [style*="background: rgb(255, 251, 235)"],
+  [style*="background-color: rgb(255, 251, 235)"]
+) { background-color: #2a1f05 !important; }
+
+/* ── Text: primary ── */
+html[data-theme="dark"] :is(
+  [style*=" color: rgb(15, 23, 42)"], [style^="color: rgb(15, 23, 42)"],
+  [style*=" color: rgb(30, 41, 59)"], [style^="color: rgb(30, 41, 59)"],
+  [style*=" color: rgb(17, 24, 39)"], [style^="color: rgb(17, 24, 39)"],
+  [style*=" color: rgb(31, 41, 55)"], [style^="color: rgb(31, 41, 55)"]
+) { color: #f1f5f9 !important; }
+
+/* ── Text: secondary ── */
+html[data-theme="dark"] :is(
+  [style*=" color: rgb(51, 65, 85)"], [style^="color: rgb(51, 65, 85)"],
+  [style*=" color: rgb(55, 65, 81)"], [style^="color: rgb(55, 65, 81)"],
+  [style*=" color: rgb(71, 85, 105)"], [style^="color: rgb(71, 85, 105)"],
+  [style*=" color: rgb(75, 85, 99)"], [style^="color: rgb(75, 85, 99)"]
+) { color: #cbd5e1 !important; }
+
+/* ── Text: muted ── */
+html[data-theme="dark"] :is(
+  [style*=" color: rgb(100, 116, 139)"], [style^="color: rgb(100, 116, 139)"],
+  [style*=" color: rgb(107, 114, 128)"], [style^="color: rgb(107, 114, 128)"]
+) { color: #94a3b8 !important; }
+
+/* ── Borders ── */
+html[data-theme="dark"] :is(
+  [style*="rgb(226, 232, 240)"],
+  [style*="rgb(229, 231, 235)"],
+  [style*="rgb(203, 213, 225)"]
+) { border-color: #334155 !important; }
+
+html[data-theme="dark"] [style*="rgb(241, 245, 249)"] { border-color: #1f2937 !important; }
+html[data-theme="dark"] [style*="rgb(254, 202, 202)"] { border-color: #7f1d1d !important; }
+html[data-theme="dark"] [style*="rgb(191, 219, 254)"] { border-color: #1e40af !important; }
+
+/* ── Form controls ── */
+html[data-theme="dark"] ::placeholder { color: #64748b; opacity: 1; }
+html[data-theme="dark"] :is(input, textarea, select) { color: #f1f5f9; }

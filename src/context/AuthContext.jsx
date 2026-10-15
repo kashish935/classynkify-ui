@@ -1,54 +1,61 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect } from "react";
+import axiosInstance from "../api/axiosInstance";
 
-const AuthContext = createContext(null)
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     try {
-      const token = localStorage.getItem('token')
-      const savedUser = localStorage.getItem('user')
-
-      // Only parse if both values actually exist
-      if (token && savedUser && savedUser !== 'undefined' && savedUser !== 'null') {
-        setUser(JSON.parse(savedUser))
+      const token = localStorage.getItem("token");
+      const stored = localStorage.getItem("user");
+      if (token && stored && stored !== "undefined" && stored !== "null") {
+        setUser(JSON.parse(stored));
       }
     } catch (err) {
-      // If anything goes wrong, clear storage and start fresh
-      console.warn('Auth storage corrupted, clearing...')
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
+      console.warn("Failed to restore session", err);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   const login = (userData, token) => {
-    localStorage.setItem('token', token)
-    localStorage.setItem('user', JSON.stringify(userData))
-    setUser(userData)
-  }
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(userData));
+    setUser(userData);
+  };
 
   const logout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    setUser(null)
-  }
-  
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
+  };
+
   const updateUser = (patch) => {
-  setUser(prev => {
-    const updated = { ...prev, ...patch }
-    localStorage.setItem('user', JSON.stringify(updated))
-    return updated
-  })
-}
+    setUser((prev) => {
+      const merged = { ...prev, ...patch };
+      localStorage.setItem("user", JSON.stringify(merged));
+      return merged;
+    });
+  };
+
+  const updateProfile = async (data) => {
+    const res = await axiosInstance.put("/auth/profile", data);
+    updateUser(res.data.user);
+    return res.data.user;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, updateUser }}>
+    <AuthContext.Provider
+      value={{ user, login, logout, loading, updateUser, updateProfile }}
+    >
       {children}
     </AuthContext.Provider>
-  )
-}
+  );
+};
 
-export const useAuth = () => useContext(AuthContext)
+export const useAuth = () => useContext(AuthContext);
