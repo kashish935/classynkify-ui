@@ -1,44 +1,26 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
 import { toast } from 'react-toastify'
-import { MOCK_BROWSE_COURSES } from '../../data/staticData'
+import { getBrowseCourses, enrollInCourse, apiError } from '../../services/studentService'
+import { assetUrl, subjectInfo } from '../../utils/courseUtils'
 
-// ─── shared localStorage key (same key used by Dashboard) ───
-const ENROLLED_KEY = 'classynkify_enrolled_ids'
+const GRADIENTS = [
+  'linear-gradient(135deg,#2563eb,#1d4ed8)',
+  'linear-gradient(135deg,#7c3aed,#6d28d9)',
+  'linear-gradient(135deg,#db2777,#be185d)',
+  'linear-gradient(135deg,#d97706,#b45309)',
+  'linear-gradient(135deg,#0284c7,#0369a1)',
+  'linear-gradient(135deg,#16a34a,#15803d)',
+  'linear-gradient(135deg,#f97316,#ea580c)',
+  'linear-gradient(135deg,#0d9488,#0f766e)',
+]
 
-const getStoredIds = () => {
-  try {
-    const raw = localStorage.getItem(ENROLLED_KEY)
-    return raw ? new Set(JSON.parse(raw)) : new Set(['c1', 'c2', 'c3', 'c5'])
-  } catch { return new Set(['c1', 'c2', 'c3', 'c5']) }
-}
-
-const saveIds = (set) => {
-  try { localStorage.setItem(ENROLLED_KEY, JSON.stringify([...set])) } catch {}
-}
-
-const CATEGORIES = ['All', 'Mathematics', 'Science', 'Programming', 'Physics', 'General']
-
-const CATEGORY_ICONS = {
-  Mathematics: '📐', Science: '🔬', Programming: '💻',
-  Physics: '⚛️', General: '📚', All: '🌟',
-}
-
-const GRADIENT_MAP = {
-  c1: 'linear-gradient(135deg,#2563eb,#1d4ed8)',
-  c2: 'linear-gradient(135deg,#7c3aed,#6d28d9)',
-  c3: 'linear-gradient(135deg,#db2777,#be185d)',
-  c4: 'linear-gradient(135deg,#d97706,#b45309)',
-  c5: 'linear-gradient(135deg,#0284c7,#0369a1)',
-  c6: 'linear-gradient(135deg,#16a34a,#15803d)',
-  c7: 'linear-gradient(135deg,#f97316,#ea580c)',
-  c8: 'linear-gradient(135deg,#0d9488,#0f766e)',
-}
-
-const EMOJI_MAP = {
-  c1: '📐', c2: '⚛️', c3: '📖', c4: '🧪',
-  c5: '💻', c6: '🧬', c7: '🌐', c8: '🌍',
+// Same category always gets the same colour
+const gradientFor = (course) => {
+  const key = String(course.category || course._id || '')
+  let hash = 0
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0
+  return GRADIENTS[hash % GRADIENTS.length]
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -46,12 +28,13 @@ const EMOJI_MAP = {
 // ─────────────────────────────────────────────────────────────
 function CourseCard({ course, isEnrolled, onEnroll, enrolling }) {
   const navigate = useNavigate()
-  const lessonCount = course.lessons?.length || 0
-  const studentCount = course.enrolledStudents?.length || 0
-  const teacherName = course.teacher?.name || course.instructor || 'Ananya Kapoor'
+  const lessonCount = course.lessonCount || 0
+  const studentCount = course.enrolledCount || 0
+  const teacherName = course.instructor || 'Instructor'
   const initials = teacherName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-  const bg = course.color || GRADIENT_MAP[course._id] || 'linear-gradient(135deg,#6366f1,#8b5cf6)'
-  const catIcon = CATEGORY_ICONS[course.category] || '📖'
+  const bg = gradientFor(course)
+  const subject = subjectInfo(course.category)
+  const thumb = assetUrl(course.thumbnail)
 
   return (
     <div
@@ -64,17 +47,17 @@ function CourseCard({ course, isEnrolled, onEnroll, enrolling }) {
       onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)'; e.currentTarget.style.borderColor = '#e8ecf0' }}
     >
       {/* Thumbnail */}
-      <div style={{ height: '160px', background: course.thumbnail ? `url(${course.thumbnail}) center/cover no-repeat` : bg, position: 'relative', flexShrink: 0, overflow: 'hidden' }}>
+      <div style={{ height: '160px', background: thumb ? `url(${thumb}) center/cover no-repeat` : bg, position: 'relative', flexShrink: 0, overflow: 'hidden' }}>
         {/* Decorative blobs */}
         <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.10)', pointerEvents: 'none' }}/>
         <div style={{ position: 'absolute', bottom: '-30px', left: '30px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.07)', pointerEvents: 'none' }}/>
         <div style={{ position: 'absolute', top: '50px', right: '60px', width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }}/>
 
         {/* Big centred emoji — only when no real image */}
-        {!course.thumbnail && (
+        {!thumb && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ fontSize: '52px', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.25))', lineHeight: 1 }}>
-              {course.emoji || EMOJI_MAP[course._id] || '📚'}
+              {subject.emoji}
             </span>
           </div>
         )}
@@ -86,7 +69,7 @@ function CourseCard({ course, isEnrolled, onEnroll, enrolling }) {
         {/* Category */}
         {course.category && (
           <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(255,255,255,0.92)', borderRadius: '8px', padding: '3px 10px', fontSize: '11px', fontWeight: '600', color: '#475569', backdropFilter: 'blur(4px)' }}>
-            {catIcon} {course.category}
+            {subject.emoji} {subject.label}
           </div>
         )}
         {/* Enrolled badge */}
@@ -156,7 +139,9 @@ function CourseCard({ course, isEnrolled, onEnroll, enrolling }) {
 // ─────────────────────────────────────────────────────────────
 function EnrollModal({ course, onConfirm, onCancel }) {
   if (!course) return null
-  const bg = course.color || GRADIENT_MAP[course._id] || 'linear-gradient(135deg,#6366f1,#8b5cf6)'
+  const bg = gradientFor(course)
+  const subject = subjectInfo(course.category)
+  const thumb = assetUrl(course.thumbnail)
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', backdropFilter: 'blur(4px)' }}
       onClick={onCancel}>
@@ -164,28 +149,30 @@ function EnrollModal({ course, onConfirm, onCancel }) {
         onClick={e => e.stopPropagation()}>
         <style>{`@keyframes modalPop { from{opacity:0;transform:scale(0.94)} to{opacity:1;transform:scale(1)} }`}</style>
         {/* Banner */}
-        <div style={{ height: '110px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ height: '110px', background: thumb ? `url(${thumb}) center/cover no-repeat` : bg, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: '-15px', right: '-15px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.10)' }}/>
           <div style={{ position: 'absolute', bottom: '-20px', left: '20px', width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }}/>
-          <span style={{ fontSize: '44px', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.25))', position: 'relative', zIndex: 1 }}>
-            {course.emoji || EMOJI_MAP[course._id] || '📚'}
-          </span>
+          {!thumb && (
+            <span style={{ fontSize: '44px', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.25))', position: 'relative', zIndex: 1 }}>
+              {subject.emoji}
+            </span>
+          )}
         </div>
         <div style={{ padding: '24px' }}>
           <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', marginBottom: '6px' }}>{course.title}</h2>
-          <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>👤 {course.teacher?.name || course.instructor || 'Ananya Kapoor'}</p>
+          <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>👤 {course.instructor || 'Instructor'}</p>
           <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px', lineHeight: 1.5 }}>{course.description}</p>
           <div style={{ display: 'flex', gap: '20px', background: '#f8fafc', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px' }}>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>{course.lessons?.length || 0}</p>
+              <p style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>{course.lessonCount || 0}</p>
               <p style={{ fontSize: '11px', color: '#94a3b8' }}>Lessons</p>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>{course.enrolledStudents?.length || 0}</p>
+              <p style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>{course.enrolledCount || 0}</p>
               <p style={{ fontSize: '11px', color: '#94a3b8' }}>Students</p>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '18px', fontWeight: '800', color: '#22c55e' }}>FREE</p>
+              <p style={{ fontSize: '18px', fontWeight: '800', color: '#22c55e' }}>{course.isFree || !course.price ? 'FREE' : `₹${course.price}`}</p>
               <p style={{ fontSize: '11px', color: '#94a3b8' }}>Price</p>
             </div>
           </div>
@@ -210,37 +197,36 @@ function EnrollModal({ course, onConfirm, onCancel }) {
 //  CoursesPage
 // ─────────────────────────────────────────────────────────────
 export default function CoursesPage() {
-  // ✅ Initialize with static data directly — renders on first paint, no flash
-  const [allCourses, setAllCourses] = useState(() => MOCK_BROWSE_COURSES)
-  const [enrolledIds, setEnrolledIds] = useState(() => getStoredIds())
-  const [loading] = useState(false)   // never true — static data is always ready
+  const [allCourses, setAllCourses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [enrolling, setEnrolling] = useState(null)
   const [pendingCourse, setPendingCourse] = useState(null)
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
 
-  // Try real API silently in background after first render
-  useEffect(() => {
-    let cancelled = false
-    const tryApi = async () => {
-      try {
-        const { default: axiosInstance } = await import('../../api/axiosInstance')
-        const [allRes, enrolledRes] = await Promise.all([
-          axiosInstance.get('/student/courses'),
-          axiosInstance.get('/student/courses/enrolled'),
-        ])
-        if (cancelled) return
-        const courses = allRes.data?.courses || allRes.data || []
-        if (Array.isArray(courses) && courses.length > 0) {
-          setAllCourses(courses)
-          const ids = new Set((enrolledRes.data?.courses || enrolledRes.data || []).map(c => c._id))
-          if (ids.size > 0) { setEnrolledIds(ids); saveIds(ids) }
-        }
-      } catch { /* stay with static data */ }
+  const load = async () => {
+    setLoading(true)
+    setLoadError('')
+    try {
+      setAllCourses(await getBrowseCourses())
+    } catch (err) {
+      setLoadError(apiError(err, 'Could not load courses. Is the server running?'))
+    } finally {
+      setLoading(false)
     }
-    tryApi()
-    return () => { cancelled = true }
-  }, [])
+  }
+
+  useEffect(() => { load() }, [])
+
+  // Categories come from the courses that actually exist
+  const categories = useMemo(() => {
+    const keys = [...new Set(allCourses.map(c => c.category).filter(Boolean))]
+    return ['All', ...keys]
+  }, [allCourses])
+
+  const categoryLabel = (cat) => (cat === 'All' ? 'All' : subjectInfo(cat).label)
+  const categoryIcon = (cat) => (cat === 'All' ? '🌟' : subjectInfo(cat).emoji)
 
   // Called when user clicks "Enroll Now" — opens confirm modal
   const handleEnrollClick = (course) => {
@@ -254,30 +240,32 @@ export default function CoursesPage() {
     setEnrolling(courseId)
     setPendingCourse(null)
 
-    // Optimistic update
-    const newIds = new Set([...enrolledIds, courseId])
-    setEnrolledIds(newIds)
-    saveIds(newIds)
-
-    // Try API too (ignore failure)
     try {
-      const { default: axiosInstance } = await import('../../api/axiosInstance')
-      await axiosInstance.post(`/student/courses/${courseId}/enroll`)
-    } catch {}
-
-    toast.success('🎉 Enrolled! Check your Dashboard → My Courses.', { position: 'top-right', autoClose: 3000 })
-    setEnrolling(null)
+      await enrollInCourse(courseId)
+      setAllCourses(prev => prev.map(c =>
+        c._id === courseId
+          ? { ...c, isEnrolled: true, enrolledCount: (c.enrolledCount || 0) + 1 }
+          : c
+      ))
+      toast.success('🎉 Enrolled! Check your Dashboard → My Courses.', { position: 'top-right', autoClose: 3000 })
+    } catch (err) {
+      toast.error(apiError(err, 'Could not enroll. Please try again.'))
+      // The course may already be enrolled / full — refresh from the server
+      load()
+    } finally {
+      setEnrolling(null)
+    }
   }
 
   const filtered = allCourses.filter(c => {
     const s = search.toLowerCase()
-    const matchSearch = c.title?.toLowerCase().includes(s) || c.description?.toLowerCase().includes(s) || (c.teacher?.name || c.instructor || '').toLowerCase().includes(s)
+    const matchSearch = c.title?.toLowerCase().includes(s) || c.description?.toLowerCase().includes(s) || (c.instructor || '').toLowerCase().includes(s)
     const matchCategory = activeCategory === 'All' || c.category === activeCategory
     return matchSearch && matchCategory
   })
 
-  const enrolledCount = enrolledIds.size
-  const availableCount = Math.max(0, allCourses.length - enrolledCount)
+  const enrolledCount = allCourses.filter(c => c.isEnrolled).length
+  const availableCount = allCourses.length - enrolledCount
 
   return (
     <div style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}>
@@ -314,9 +302,9 @@ export default function CoursesPage() {
           />
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {CATEGORIES.map(cat => (
+          {categories.map(cat => (
             <button key={cat} onClick={() => setActiveCategory(cat)} style={{ padding: '8px 16px', borderRadius: '20px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', border: '1.5px solid', background: activeCategory === cat ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : '#fff', color: activeCategory === cat ? '#fff' : '#64748b', borderColor: activeCategory === cat ? 'transparent' : '#e2e8f0', boxShadow: activeCategory === cat ? '0 2px 8px rgba(99,102,241,0.3)' : 'none' }}>
-              {cat}
+              {categoryIcon(cat)} {categoryLabel(cat)}
             </button>
           ))}
         </div>
@@ -330,8 +318,18 @@ export default function CoursesPage() {
         </div>
       )}
 
+      {/* Load error */}
+      {!loading && loadError && (
+        <div style={{ textAlign: 'center', padding: '48px 24px', background: '#fff', borderRadius: '20px', border: '1px solid #fecaca' }}>
+          <div style={{ fontSize: '40px', marginBottom: '12px' }}>⚠️</div>
+          <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>Couldn't load courses</h3>
+          <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>{loadError}</p>
+          <button onClick={load} style={{ padding: '10px 24px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
+        </div>
+      )}
+
       {/* Empty */}
-      {!loading && filtered.length === 0 && (
+      {!loading && !loadError && filtered.length === 0 && (
         <div style={{ textAlign: 'center', padding: '64px 24px', background: '#fff', borderRadius: '20px', border: '1px solid #e8ecf0' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
           <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>No courses found</h3>
@@ -341,14 +339,14 @@ export default function CoursesPage() {
       )}
 
       {/* Grid */}
-      {!loading && filtered.length > 0 && (
+      {!loading && !loadError && filtered.length > 0 && (
         <>
           <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '16px' }}>
-            Showing {filtered.length} course{filtered.length !== 1 ? 's' : ''}{activeCategory !== 'All' ? ` in ${activeCategory}` : ''}
+            Showing {filtered.length} course{filtered.length !== 1 ? 's' : ''}{activeCategory !== 'All' ? ` in ${categoryLabel(activeCategory)}` : ''}
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
             {filtered.map(course => (
-              <CourseCard key={course._id} course={course} isEnrolled={enrolledIds.has(course._id)} onEnroll={handleEnrollClick} enrolling={enrolling} />
+              <CourseCard key={course._id} course={course} isEnrolled={course.isEnrolled} onEnroll={handleEnrollClick} enrolling={enrolling} />
             ))}
           </div>
         </>

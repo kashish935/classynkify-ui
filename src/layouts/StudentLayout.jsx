@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { MOCK_NOTIFICATIONS } from '../data/staticData'
+import { getStudentNotifications } from '../services/studentService'
 import { useAuth } from '../context/AuthContext'
 
 const NAV_ITEMS = [
@@ -72,6 +72,17 @@ const NAV_ITEMS = [
   },
 ]
 
+const timeAgo = (date) => {
+  const mins = Math.floor((Date.now() - new Date(date).getTime()) / 60000)
+  if (Number.isNaN(mins) || mins < 1) return 'Just now'
+  if (mins < 60) return `${mins} min ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs} hour${hrs !== 1 ? 's' : ''} ago`
+  const days = Math.floor(hrs / 24)
+  if (days < 30) return `${days} day${days !== 1 ? 's' : ''} ago`
+  return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 export default function StudentLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -89,8 +100,36 @@ export default function StudentLayout() {
   const firstName = user?.name?.split(' ')[0] || 'Student'
 
   const [notifOpen, setNotifOpen] = useState(false)
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS)
+  const [selectedNotif, setSelectedNotif] = useState(null)
+  const [rawNotifs, setRawNotifs] = useState([])
   const notifRef = useRef(null)
+
+  // Which notifications were read is remembered per user in this browser
+  const readKey = `classynkify_read_notifs_${user?._id || 'me'}`
+  const [readIds, setReadIds] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(readKey) || '[]')) } catch { return new Set() }
+  })
+  const saveReadIds = (set) => {
+    setReadIds(set)
+    try { localStorage.setItem(readKey, JSON.stringify([...set])) } catch { /* storage unavailable */ }
+  }
+
+  // Load real notifications now, whenever the page changes, and every minute
+  useEffect(() => {
+    let cancelled = false
+    const load = () =>
+      getStudentNotifications()
+        .then(list => { if (!cancelled) setRawNotifs(list) })
+        .catch(() => { /* keep the previous list if the request fails */ })
+    load()
+    const timer = setInterval(load, 60000)
+    return () => { cancelled = true; clearInterval(timer) }
+  }, [location.pathname])
+
+  const notifications = useMemo(
+    () => rawNotifs.map(n => ({ ...n, read: readIds.has(n.id), time: timeAgo(n.createdAt) })),
+    [rawNotifs, readIds]
+  )
   const unreadCount = notifications.filter(n => !n.read).length
 
   useEffect(() => {
@@ -104,9 +143,8 @@ export default function StudentLayout() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const [selectedNotif, setSelectedNotif] = useState(null)
-  const markAllRead = () => setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-  const markRead = (id) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+  const markAllRead = () => saveReadIds(new Set([...readIds, ...rawNotifs.map(n => n.id)]))
+  const markRead = (id) => saveReadIds(new Set([...readIds, id]))
   const openNotif = (n) => { markRead(n.id); setSelectedNotif(n) }
   const closeDetail = () => setSelectedNotif(null)
 
@@ -377,6 +415,11 @@ export default function StudentLayout() {
 
                       {/* List */}
                       <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+                        {notifications.length === 0 && (
+                          <div style={{ padding: '32px 16px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
+                            🎉 You're all caught up. No notifications yet.
+                          </div>
+                        )}
                         {notifications.map(n => (
                           <div key={n.id} onClick={() => openNotif(n)}
                             style={{ display: 'flex', gap: '12px', padding: '12px 16px', borderBottom: '1px solid #f8fafc', cursor: 'pointer', background: n.read ? '#fff' : '#fafaff', transition: 'background 0.15s' }}

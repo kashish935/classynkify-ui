@@ -1,69 +1,13 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-// ── Mock Data ──
-const mockAssignments = [
-  {
-    _id: 'a1',
-    title: 'Algebra Problem Set 1',
-    course: { _id: '1', title: 'Mathematics — Grade 10' },
-    description: 'Solve all 20 problems from Chapter 3. Show all working steps clearly.',
-    dueDate: '2026-04-28',
-    totalMarks: 100,
-    status: 'active',
-    submissions: [
-      { _id: 's1', student: { name: 'Rohan Sharma', email: 'rohan@school.edu' }, submittedAt: '2026-04-20', content: 'My solutions are attached.', grade: null },
-      { _id: 's2', student: { name: 'Priya Mehta', email: 'priya@school.edu' }, submittedAt: '2026-04-21', content: 'Completed all 20 problems.', grade: 88 },
-      { _id: 's3', student: { name: 'Arjun Singh', email: 'arjun@school.edu' }, submittedAt: '2026-04-22', content: 'Done. Please check.', grade: null },
-    ],
-    createdAt: '2026-04-15',
-  },
-  {
-    _id: 'a2',
-    title: 'Newton\'s Laws — Lab Report',
-    course: { _id: '2', title: 'Physics Fundamentals' },
-    description: 'Write a detailed lab report on your observations from the pendulum experiment.',
-    dueDate: '2026-04-30',
-    totalMarks: 50,
-    status: 'active',
-    submissions: [
-      { _id: 's4', student: { name: 'Sneha Patel', email: 'sneha@school.edu' }, submittedAt: '2026-04-22', content: 'Lab report attached.', grade: 45 },
-    ],
-    createdAt: '2026-04-16',
-  },
-  {
-    _id: 'a3',
-    title: 'Essay: To Kill a Mockingbird',
-    course: { _id: '3', title: 'English Literature' },
-    description: 'Write a 1000-word critical analysis essay on the themes of justice and morality.',
-    dueDate: '2026-04-25',
-    totalMarks: 80,
-    status: 'active',
-    submissions: [],
-    createdAt: '2026-04-17',
-  },
-  {
-    _id: 'a4',
-    title: 'Periodic Table Quiz',
-    course: { _id: '4', title: 'Chemistry Basics' },
-    description: 'Fill in the first 20 elements of the periodic table with their symbols and atomic numbers.',
-    dueDate: '2026-04-20',
-    totalMarks: 40,
-    status: 'closed',
-    submissions: [
-      { _id: 's5', student: { name: 'Rahul Kumar', email: 'rahul@school.edu' }, submittedAt: '2026-04-18', content: 'Completed.', grade: 36 },
-      { _id: 's6', student: { name: 'Anjali Das', email: 'anjali@school.edu' }, submittedAt: '2026-04-19', content: 'Done.', grade: 40 },
-    ],
-    createdAt: '2026-04-10',
-  },
-]
-
-const mockCourses = [
-  { _id: '1', title: 'Mathematics — Grade 10' },
-  { _id: '2', title: 'Physics Fundamentals' },
-  { _id: '3', title: 'English Literature' },
-  { _id: '4', title: 'Chemistry Basics' },
-  { _id: '5', title: 'Computer Science — Grade 12' },
-]
+import { useState, useEffect } from 'react'
+import {
+  getTeacherAssignments,
+  getTeacherCourseOptions,
+  createTeacherAssignment,
+  setTeacherAssignmentStatus,
+  deleteTeacherAssignment,
+  gradeTeacherSubmission,
+  apiError,
+} from '../../services/teacherAssignmentService'
 
 // ── Helpers ──
 const getDaysLeft = (dueDate) => {
@@ -81,23 +25,32 @@ const formatDate = (dateStr) => {
 // ── Create Assignment Modal ──
 const CreateModal = ({ courses, onSave, onCancel }) => {
   const [form, setForm] = useState({
-    title: '', courseId: '', description: '', dueDate: '', totalMarks: '100'
+    title: '', courseId: '', courseName: '', description: '', dueDate: '', totalMarks: '100'
   })
   const [focused, setFocused] = useState('')
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
     if (error) setError('')
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    if (saving) return
     if (!form.title.trim()) { setError('Assignment title is required.'); return }
     if (!form.courseId) { setError('Please select a course.'); return }
+    if (form.courseId === 'other' && !form.courseName.trim()) { setError('Please type the course name.'); return }
     if (!form.dueDate) { setError('Please set a due date.'); return }
     if (!form.description.trim()) { setError('Please add a description.'); return }
-    onSave(form)
+    setSaving(true)
+    try {
+      await onSave(form)
+    } catch (err) {
+      setError(apiError(err, 'Could not create the assignment. Please try again.'))
+      setSaving(false)
+    }
   }
 
   const iStyle = (field) => ({
@@ -188,7 +141,21 @@ const CreateModal = ({ courses, onSave, onCancel }) => {
               {courses.map(c => (
                 <option key={c._id} value={c._id}>{c.title}</option>
               ))}
+              <option value="other">Other (type a course name)</option>
             </select>
+            {form.courseId === 'other' && (
+              <>
+                <input type="text" name="courseName" value={form.courseName} onChange={handleChange}
+                  onFocus={() => setFocused('courseName')} onBlur={() => setFocused('')}
+                  placeholder="Type the course name, e.g. General Knowledge"
+                  maxLength={80} autoFocus
+                  style={{ ...iStyle('courseName'), marginTop: '8px' }}
+                />
+                <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '5px' }}>
+                  This assignment will be visible to all students enrolled in any of your courses.
+                </p>
+              </>
+            )}
           </div>
 
           {/* Due date + Total marks */}
@@ -234,13 +201,14 @@ const CreateModal = ({ courses, onSave, onCancel }) => {
               borderRadius: '10px', fontSize: '13px', fontWeight: '600', color: '#374151',
               cursor: 'pointer', fontFamily: 'inherit'
             }}>Cancel</button>
-            <button type="submit" style={{
+            <button type="submit" disabled={saving} style={{
               flex: 2, padding: '12px',
               background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
               color: 'white', border: 'none', borderRadius: '10px',
-              fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: '13px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+              opacity: saving ? 0.7 : 1,
               boxShadow: '0 4px 14px rgba(37,99,235,0.3)'
-            }}>Create Assignment</button>
+            }}>{saving ? 'Creating…' : 'Create Assignment'}</button>
           </div>
         </form>
       </div>
@@ -251,8 +219,22 @@ const CreateModal = ({ courses, onSave, onCancel }) => {
 // ── Grade Modal ──
 const GradeModal = ({ submission, totalMarks, onSave, onCancel }) => {
   const [grade, setGrade] = useState(submission.grade ?? '')
-  const [feedback, setFeedback] = useState('')
+  const [feedback, setFeedback] = useState(submission.feedback ?? '')
   const [focused, setFocused] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSave = async () => {
+    if (saving || grade === '') return
+    setError('')
+    setSaving(true)
+    try {
+      await onSave(submission._id, Number(grade), feedback)
+    } catch (err) {
+      setError(apiError(err, 'Could not save the grade. Please try again.'))
+      setSaving(false)
+    }
+  }
 
   return (
     <div style={{
@@ -355,6 +337,9 @@ const GradeModal = ({ submission, totalMarks, onSave, onCancel }) => {
           />
         </div>
 
+        {error && (
+          <p style={{ fontSize: '12px', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px' }}>{error}</p>
+        )}
         <div style={{ display: 'flex', gap: '10px' }}>
           <button onClick={onCancel} style={{
             flex: 1, padding: '12px', background: 'white', border: '1.5px solid #e2e8f0',
@@ -362,8 +347,8 @@ const GradeModal = ({ submission, totalMarks, onSave, onCancel }) => {
             cursor: 'pointer', fontFamily: 'inherit'
           }}>Cancel</button>
           <button
-            onClick={() => onSave(submission._id, Number(grade), feedback)}
-            disabled={grade === ''}
+            onClick={handleSave}
+            disabled={grade === '' || saving}
             style={{
               flex: 2, padding: '12px',
               background: grade === '' ? '#e2e8f0' : 'linear-gradient(135deg, #0d9488, #0f766e)',
@@ -538,8 +523,9 @@ const SubmissionsPanel = ({ assignment, onClose, onGrade }) => {
   const [gradeTarget, setGradeTarget] = useState(null)
   const [localSubs, setLocalSubs] = useState(assignment.submissions)
 
-  const handleSaveGrade = (subId, grade, feedback) => {
-    setLocalSubs(prev => prev.map(s => s._id === subId ? { ...s, grade } : s))
+  const handleSaveGrade = async (subId, grade, feedback) => {
+    await onGrade(assignment._id, subId, grade, feedback) // throws on failure → GradeModal shows the error
+    setLocalSubs(prev => prev.map(s => s._id === subId ? { ...s, grade, feedback } : s))
     setGradeTarget(null)
   }
 
@@ -688,47 +674,75 @@ const SubmissionsPanel = ({ assignment, onClose, onGrade }) => {
 
 // ── Main Page ──
 const Assignments = () => {
-  const [assignments, setAssignments] = useState(mockAssignments)
+  const [assignments, setAssignments] = useState([])
+  const [courses, setCourses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [viewTarget, setViewTarget] = useState(null)
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
   const [successMsg, setSuccessMsg] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
 
   const showSuccess = (msg) => {
     setSuccessMsg(msg)
     setTimeout(() => setSuccessMsg(''), 3000)
   }
+  const showError = (msg) => {
+    setErrorMsg(msg)
+    setTimeout(() => setErrorMsg(''), 4000)
+  }
 
-  const handleCreate = (form) => {
-    const course = mockCourses.find(c => c._id === form.courseId)
-    const newA = {
-      _id: `a${Date.now()}`,
-      title: form.title,
-      course: { _id: form.courseId, title: course?.title || '' },
-      description: form.description,
-      dueDate: form.dueDate,
-      totalMarks: Number(form.totalMarks),
-      status: 'active',
-      submissions: [],
-      createdAt: new Date().toISOString().split('T')[0],
-    }
-    setAssignments(prev => [newA, ...prev])
+  useEffect(() => {
+    Promise.all([getTeacherAssignments(), getTeacherCourseOptions()])
+      .then(([list, courseList]) => { setAssignments(list); setCourses(courseList) })
+      .catch(err => setLoadError(apiError(err, 'Could not load assignments. Is the server running?')))
+      .finally(() => setLoading(false))
+  }, [])
+
+  // Throws on failure so the modal can show the message
+  const handleCreate = async (form) => {
+    const created = await createTeacherAssignment(form)
+    setAssignments(prev => [created, ...prev])
     setShowCreate(false)
     showSuccess('Assignment created successfully!')
   }
 
-  const handleDelete = (id) => {
-    setAssignments(prev => prev.filter(a => a._id !== id))
-    showSuccess('Assignment deleted.')
+  const handleDelete = async (id) => {
+    try {
+      await deleteTeacherAssignment(id)
+      setAssignments(prev => prev.filter(a => a._id !== id))
+      showSuccess('Assignment deleted.')
+    } catch (err) {
+      showError(apiError(err, 'Could not delete the assignment.'))
+    }
   }
 
-  const handleToggleStatus = (id) => {
+  const handleToggleStatus = async (id) => {
+    const current = assignments.find(a => a._id === id)
+    if (!current) return
+    const next = current.status === 'active' ? 'closed' : 'active'
+    try {
+      await setTeacherAssignmentStatus(id, next)
+      setAssignments(prev => prev.map(a => a._id === id ? { ...a, status: next } : a))
+      showSuccess('Assignment status updated.')
+    } catch (err) {
+      showError(apiError(err, 'Could not update the status.'))
+    }
+  }
+
+  // Throws on failure so the grade modal can show the message
+  const handleGrade = async (assignmentId, submissionId, grade, feedback) => {
+    await gradeTeacherSubmission(assignmentId, submissionId, grade, feedback)
     setAssignments(prev => prev.map(a =>
-      a._id === id ? { ...a, status: a.status === 'active' ? 'closed' : 'active' } : a
+      a._id !== assignmentId ? a : {
+        ...a,
+        submissions: a.submissions.map(s => s._id === submissionId ? { ...s, grade, feedback } : s),
+      }
     ))
-    showSuccess('Assignment status updated.')
+    showSuccess('Grade saved.')
   }
 
   const counts = {
@@ -764,6 +778,23 @@ const Assignments = () => {
               <polyline points="20 6 9 17 4 12" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             {successMsg}
+          </div>
+        )}
+
+        {errorMsg && (
+          <div style={{
+            position: 'fixed', top: '80px', right: '24px', zIndex: 90,
+            background: '#dc2626', color: 'white', fontSize: '13px', fontWeight: '500',
+            padding: '12px 20px', borderRadius: '12px',
+            boxShadow: '0 4px 20px rgba(220,38,38,0.3)'
+          }}>
+            {errorMsg}
+          </div>
+        )}
+
+        {loadError && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: '12px', padding: '12px 16px', fontSize: '13px', marginBottom: '16px' }}>
+            {loadError}
           </div>
         )}
 
@@ -868,7 +899,9 @@ const Assignments = () => {
         </div>
 
         {/* Grid */}
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8', fontSize: '13px' }}>Loading assignments…</div>
+        ) : filtered.length === 0 ? (
           <div style={{
             background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0',
             padding: '60px 20px', textAlign: 'center'
@@ -906,7 +939,7 @@ const Assignments = () => {
       {/* Modals */}
       {showCreate && (
         <CreateModal
-          courses={mockCourses}
+          courses={courses}
           onSave={handleCreate}
           onCancel={() => setShowCreate(false)}
         />
@@ -916,7 +949,7 @@ const Assignments = () => {
         <SubmissionsPanel
           assignment={viewTarget}
           onClose={() => setViewTarget(null)}
-          onGrade={() => {}}
+          onGrade={handleGrade}
         />
       )}
     </>

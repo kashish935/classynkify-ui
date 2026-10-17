@@ -105,16 +105,15 @@ export default function Students() {
     setLoading(true);
     try {
       const [studentsRes, coursesRes] = await Promise.all([
-        api.get("/students"),
-        api.get("/courses/my-courses"),
+        api.get("/teacher/students"),
+        api.get("/teacher/courses"),
       ]);
       setStudents(studentsRes.data);
-      setCourses(coursesRes.data);
+      setCourses(coursesRes.data.courses || []);
     } catch (err) {
       console.error(err);
-      // Fallback mock data for UI preview
-      setStudents(MOCK_STUDENTS);
-      setCourses(MOCK_COURSES);
+      setStudents([]);
+      setCourses([]);
     } finally {
       setLoading(false);
     }
@@ -320,7 +319,7 @@ function StudentRow({ student, courses, isLast, onClick }) {
     return found?.title || "—";
   }) || [];
 
-  const progress = student.avgProgress ?? Math.floor(Math.random() * 60 + 30);
+  const progress = student.avgProgress ?? 0;
   const progressColor =
     progress >= 80 ? "#10B981" : progress >= 50 ? "#3B82F6" : "#F59E0B";
 
@@ -432,20 +431,3 @@ function StudentRow({ student, courses, isLast, onClick }) {
     </div>
   );
 }
-
-// ── Mock data for offline/dev preview ────────────────────────────────────────
-const MOCK_COURSES = [
-  { _id: "c1", title: "Mathematics — Grade 10", status: "active" },
-  { _id: "c2", title: "Physics Fundamentals", status: "active" },
-  { _id: "c3", title: "English Literature", status: "active" },
-];
-
-const MOCK_STUDENTS = [
-  { _id: "s1", name: "Rohan Sharma", email: "rohan@school.edu", enrolledCourses: ["c1", "c2"], avgProgress: 82, createdAt: "2024-01-15" },
-  { _id: "s2", name: "Priya Patel", email: "priya@school.edu", enrolledCourses: ["c1", "c3"], avgProgress: 67, createdAt: "2024-01-18", lastActive: new Date().toISOString() },
-  { _id: "s3", name: "Arjun Mehta", email: "arjun@school.edu", enrolledCourses: ["c2"], avgProgress: 91, createdAt: "2024-01-20", lastActive: new Date().toISOString() },
-  { _id: "s4", name: "Sneha Gupta", email: "sneha@school.edu", enrolledCourses: ["c1", "c2", "c3"], avgProgress: 45, createdAt: "2024-02-01" },
-  { _id: "s5", name: "Karan Singh", email: "karan@school.edu", enrolledCourses: ["c3"], avgProgress: 73, createdAt: "2024-02-05", lastActive: new Date().toISOString() },
-  { _id: "s6", name: "Ananya Verma", email: "ananya@school.edu", enrolledCourses: ["c1"], avgProgress: 88, createdAt: "2024-02-10", lastActive: new Date().toISOString() },
-  { _id: "s7", name: "Dev Chopra", email: "dev@school.edu", enrolledCourses: ["c2", "c3"], avgProgress: 34, createdAt: "2024-02-14" },
-];

@@ -20,7 +20,7 @@ import Assignments   from './pages/student/Assignments'
 import Grades        from './pages/student/Grades'
 import Profile       from './pages/student/Profile'
 import DoubtSolver   from './pages/student/DoubtSolver'
-import CoursesPage   from './pages/student/CoursesPage'
+import CoursesPage   from './pages/student/coursespage'
 
 // Teacher
 import TeacherLayout      from './layouts/TeacherLayout'

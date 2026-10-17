@@ -117,19 +117,18 @@ export default function StudentDetail() {
     setLoading(true);
     try {
       const [studentRes, coursesRes, assignmentsRes] = await Promise.all([
-        api.get(`/students/${studentId}`),
-        api.get(`/students/${studentId}/courses`),
-        api.get(`/students/${studentId}/assignments`),
+        api.get(`/teacher/students/${studentId}`),
+        api.get(`/teacher/students/${studentId}/courses`),
+        api.get(`/teacher/students/${studentId}/assignments`),
       ]);
       setStudent(studentRes.data);
       setCourses(coursesRes.data);
       setAssignments(assignmentsRes.data);
     } catch (err) {
       console.error(err);
-      // Fallback mock for preview
-      setStudent(MOCK_STUDENT);
-      setCourses(MOCK_ENROLLED_COURSES);
-      setAssignments(MOCK_ASSIGNMENTS);
+      setStudent(null);
+      setCourses([]);
+      setAssignments([]);
     } finally {
       setLoading(false);
     }
@@ -612,24 +611,3 @@ const SUBJECT_ICONS = {
   "Computer Science": "💻",
   Economics: "📊",
 };
-
-// ── Mock data ────────────────────────────────────────────────────────────────
-const MOCK_STUDENT = {
-  _id: "s1",
-  name: "Rohan Sharma",
-  email: "rohan@school.edu",
-  createdAt: "2024-01-15",
-  lastActive: new Date().toISOString(),
-};
-
-const MOCK_ENROLLED_COURSES = [
-  { _id: "c1", title: "Mathematics — Grade 10", subject: "Mathematics", gradeLevel: "Grade 10", progress: 82, totalLectures: 12, completedLectures: 10, enrolledAt: "2024-01-16" },
-  { _id: "c2", title: "Physics Fundamentals", subject: "Physics", gradeLevel: "Grade 11", progress: 61, totalLectures: 8, completedLectures: 5, enrolledAt: "2024-02-01" },
-];
-
-const MOCK_ASSIGNMENTS = [
-  { _id: "a1", title: "Algebra Problem Set", courseTitle: "Mathematics — Grade 10", dueDate: "2024-03-10", submission: { submittedAt: "2024-03-09", score: 88 } },
-  { _id: "a2", title: "Wave Equations", courseTitle: "Physics Fundamentals", dueDate: "2024-03-15", submission: { submittedAt: "2024-03-14", score: 74 } },
-  { _id: "a3", title: "Geometry Quiz", courseTitle: "Mathematics — Grade 10", dueDate: "2024-04-01", submission: null },
-  { _id: "a4", title: "Thermodynamics Lab", courseTitle: "Physics Fundamentals", dueDate: "2024-03-28", submission: null },
-];
