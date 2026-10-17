@@ -1,455 +1,284 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import { useAuth } from '../../context/AuthContext'
+import api from '../../services/api'
+import { toCourse, subjectInfo, MAX_ENROLLMENT } from '../../utils/courseUtils'
 
-// ── Mock data (replace with API calls once backend is ready) ──
-const mockStats = {
-  totalCourses: 8,
-  totalStudents: 142,
-  pendingAssignments: 6,
-  avgCompletion: 76,
+const card = {
+  background: '#ffffff',
+  border: '1px solid #e2e8f0',
+  borderRadius: '20px',
 }
 
-const mockCourses = [
-  { id: 1, title: 'Mathematics — Grade 10', subject: '📐', students: 38, lectures: 12, completion: 82, status: 'active' },
-  { id: 2, title: 'Physics Fundamentals', subject: '⚛️', students: 29, lectures: 8, completion: 61, status: 'active' },
-  { id: 3, title: 'English Literature', subject: '📖', students: 41, lectures: 15, completion: 90, status: 'active' },
-  { id: 4, title: 'Chemistry Basics', subject: '🧪', students: 34, lectures: 6, completion: 44, status: 'draft' },
-]
+const greeting = () => {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
 
-const mockActivity = [
-  { id: 1, text: 'Rohan Sharma submitted Assignment 3', time: '5 min ago', type: 'submission' },
-  { id: 2, text: 'New student enrolled in Physics', time: '1 hr ago', type: 'enroll' },
-  { id: 3, text: 'Priya Mehta submitted Assignment 2', time: '2 hr ago', type: 'submission' },
-  { id: 4, text: 'You uploaded Lecture 9 in Maths', time: '3 hr ago', type: 'upload' },
-  { id: 5, text: '3 new students joined English Lit', time: 'Yesterday', type: 'enroll' },
-]
-
-// ── Reusable sub-components ──
-
-const StatCard = ({ label, value, change, positive, color, bg, icon }) => {
+function StatCard({ icon, iconBg, value, label, note, noteColor }) {
   const [hovered, setHovered] = useState(false)
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: 'white',
-        borderRadius: '16px',
-        border: '1px solid #e2e8f0',
-        padding: '20px',
+        ...card,
+        padding: '24px',
+        boxShadow: hovered ? '0 12px 28px rgba(15, 23, 42, 0.1)' : '0 1px 3px rgba(15, 23, 42, 0.05)',
+        transform: hovered ? 'translateY(-2px)' : 'none',
         transition: 'all 0.2s',
-        boxShadow: hovered ? '0 4px 20px rgba(0,0,0,0.07)' : 'none',
-        cursor: 'default'
       }}
     >
-      <div style={{
-        width: '44px', height: '44px', borderRadius: '12px',
-        background: bg, display: 'flex', alignItems: 'center',
-        justifyContent: 'center', marginBottom: '16px'
-      }}>
+      <div
+        style={{
+          width: '48px', height: '48px', borderRadius: '14px', background: iconBg,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', marginBottom: '18px',
+        }}
+      >
         {icon}
       </div>
-      <p style={{ fontSize: '30px', fontWeight: '700', color: '#0f172a', lineHeight: 1, marginBottom: '4px' }}>
-        {value}
-      </p>
-      <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>{label}</p>
-      <p style={{ fontSize: '11px', fontWeight: '600', color: positive ? '#0d9488' : '#f59e0b' }}>
-        {change}
-      </p>
+      <div style={{ fontSize: '38px', fontWeight: '700', color: '#0f172a', lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: '15px', color: '#64748b', margin: '8px 0 14px' }}>{label}</div>
+      <div style={{ fontSize: '13px', fontWeight: '600', color: noteColor }}>{note}</div>
     </div>
   )
 }
 
-const ActivityDot = ({ type }) => {
-  const map = {
-    submission: { bg: '#eff6ff', color: '#2563eb' },
-    enroll: { bg: '#f0fdfa', color: '#0d9488' },
-    upload: { bg: '#f5f3ff', color: '#8b5cf6' },
-  }
-  const c = map[type] || map.upload
-  const icons = {
-    submission: (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2"/>
-        <polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-        <path d="M9 13h6M9 17h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    ),
-    enroll: (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
-      </svg>
-    ),
-    upload: (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-        <polyline points="16 16 12 12 8 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <line x1="12" y1="12" x2="12" y2="21" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    )
-  }
+function CourseRow({ course, onManage }) {
+  const info = subjectInfo(course.subject)
+  const enrolled = course.students.length
+  const pct = Math.min(100, Math.round((enrolled / MAX_ENROLLMENT) * 100))
+  const isActive = course.status === 'active'
+
   return (
-    <div style={{
-      width: '32px', height: '32px', borderRadius: '8px',
-      background: c.bg, color: c.color,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-    }}>
-      {icons[type]}
+    <div
+      style={{
+        display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 24px',
+        borderTop: '1px solid #f1f5f9', flexWrap: 'wrap',
+      }}
+    >
+      <div
+        style={{
+          width: '48px', height: '48px', borderRadius: '14px', background: info.bg, overflow: 'hidden',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0,
+        }}
+      >
+        {course.thumbnail ? (
+          <img src={course.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          info.emoji
+        )}
+      </div>
+
+      <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '16px', fontWeight: '600', color: '#0f172a' }}>{course.title}</span>
+          <span
+            style={{
+              padding: '2px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: '600',
+              background: isActive ? '#dcfce7' : '#f1f5f9', color: isActive ? '#15803d' : '#64748b',
+            }}
+          >
+            {isActive ? 'Active' : 'Draft'}
+          </span>
+        </div>
+        <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+          {enrolled} students &nbsp; {course.lessons.length} lectures
+        </div>
+      </div>
+
+      <div style={{ width: '150px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
+          <span>Enrollment</span>
+          <span style={{ fontWeight: '700', color: '#0f172a' }}>{enrolled}/{MAX_ENROLLMENT}</span>
+        </div>
+        <div style={{ height: '6px', borderRadius: '999px', background: '#e2e8f0', overflow: 'hidden' }}>
+          <div style={{ width: `${pct}%`, height: '100%', background: info.fg, borderRadius: '999px' }} />
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onManage(course._id)}
+        style={{
+          padding: '10px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#ffffff',
+          color: '#0f172a', fontSize: '14px', fontWeight: '600', fontFamily: 'inherit', cursor: 'pointer',
+        }}
+      >
+        Manage
+      </button>
     </div>
   )
 }
 
-// ── Main Dashboard ──
-const TeacherDashboard = () => {
-  const { user } = useAuth()
-  const navigate = useNavigate()
-  const [stats] = useState(mockStats)
-  const [courses] = useState(mockCourses)
-  const [activity] = useState(mockActivity)
-
-  const getGreeting = () => {
-    const h = new Date().getHours()
-    if (h < 12) return 'Good morning'
-    if (h < 17) return 'Good afternoon'
-    return 'Good evening'
+function QuickAction({ label, onClick, disabled, tone }) {
+  const tones = {
+    teal: { bg: '#f0fdfa', border: '#99f6e4', fg: '#0f766e' },
+    blue: { bg: '#eff6ff', border: '#bfdbfe', fg: '#1d4ed8' },
+    purple: { bg: '#f5f3ff', border: '#ddd6fe', fg: '#7c3aed' },
   }
+  const t = tones[tone]
+  return (
+    <button
+      type="button"
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '16px 18px', borderRadius: '14px', fontSize: '15px', fontWeight: '600', fontFamily: 'inherit',
+        background: t.bg, border: `1px solid ${t.border}`, color: t.fg,
+        cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1,
+      }}
+    >
+      <span>{label}</span>
+      {disabled ? <span style={{ fontSize: '12px', fontWeight: '500' }}>Soon</span> : <span>›</span>}
+    </button>
+  )
+}
+
+export default function TeacherDashboard() {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [courses, setCourses] = useState([])
+  const [loading, setLoading] = useState(true)
 
   const firstName = user?.name?.split(' ')[0] || 'Teacher'
 
-  const statCards = [
-    {
-      label: 'Total Courses',
-      value: stats.totalCourses,
-      change: '+2 this month',
-      positive: true,
-      color: '#2563eb', bg: '#eff6ff',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="#2563eb" strokeWidth="1.7" strokeLinecap="round"/>
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="#2563eb" strokeWidth="1.7"/>
-        </svg>
-      )
-    },
-    {
-      label: 'Total Students',
-      value: stats.totalStudents,
-      change: '+18 this week',
-      positive: true,
-      color: '#0d9488', bg: '#f0fdfa',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#0d9488" strokeWidth="1.7" strokeLinecap="round"/>
-          <circle cx="9" cy="7" r="4" stroke="#0d9488" strokeWidth="1.7"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="#0d9488" strokeWidth="1.7" strokeLinecap="round"/>
-        </svg>
-      )
-    },
-    {
-      label: 'Pending Reviews',
-      value: stats.pendingAssignments,
-      change: 'Assignments to grade',
-      positive: false,
-      color: '#f59e0b', bg: '#fffbeb',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#f59e0b" strokeWidth="1.7"/>
-          <polyline points="14 2 14 8 20 8" stroke="#f59e0b" strokeWidth="1.7" strokeLinejoin="round"/>
-          <path d="M9 13h6M9 17h4" stroke="#f59e0b" strokeWidth="1.7" strokeLinecap="round"/>
-        </svg>
-      )
-    },
-    {
-      label: 'Avg. Completion',
-      value: `${stats.avgCompletion}%`,
-      change: '+4% from last week',
-      positive: true,
-      color: '#8b5cf6', bg: '#f5f3ff',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <line x1="18" y1="20" x2="18" y2="10" stroke="#8b5cf6" strokeWidth="1.7" strokeLinecap="round"/>
-          <line x1="12" y1="20" x2="12" y2="4" stroke="#8b5cf6" strokeWidth="1.7" strokeLinecap="round"/>
-          <line x1="6" y1="20" x2="6" y2="14" stroke="#8b5cf6" strokeWidth="1.7" strokeLinecap="round"/>
-        </svg>
-      )
-    },
-  ]
+  useEffect(() => {
+    api
+      .get('/teacher/courses')
+      .then((res) => setCourses((res.data.courses || []).map(toCourse)))
+      .catch((err) => toast.error(err.response?.data?.message || 'Failed to load your courses.'))
+      .finally(() => setLoading(false))
+  }, [])
 
-  // ── NO <MainLayout> wrapper — TeacherLayout in the router handles the shell ──
+  const uniqueStudents = new Set(
+    courses.flatMap((c) => c.students.map((s) => String(s._id || s)))
+  ).size
+  const totalLectures = courses.reduce((sum, c) => sum + c.lessons.length, 0)
+  const activeCourses = courses.filter((c) => c.status === 'active').length
+
+  const goManage = (id) => navigate(`/teacher/courses/${id}`)
+  const goCreate = () => navigate('/teacher/courses/create')
+
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
-
-      {/* ── Page Header ── */}
-      <div style={{
-        display: 'flex', alignItems: 'flex-start',
-        justifyContent: 'space-between', marginBottom: '28px',
-        flexWrap: 'wrap', gap: '16px'
-      }}>
+    <div style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+      {/* Greeting */}
+      <div
+        style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+          gap: '16px', flexWrap: 'wrap', marginBottom: '28px',
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>
-            {getGreeting()}, {firstName} 👋
+          <h1 style={{ margin: 0, fontSize: '30px', fontWeight: '700', color: '#0f172a' }}>
+            {greeting()}, {firstName} 👋
           </h1>
-          <p style={{ fontSize: '13px', color: '#64748b' }}>
-            Here's what's happening in your classroom today.
+          <p style={{ margin: '6px 0 0', fontSize: '15px', color: '#64748b' }}>
+            Here&apos;s what&apos;s happening in your classroom today.
           </p>
         </div>
         <button
-          onClick={() => navigate('/teacher/courses/create')}
+          type="button"
+          onClick={goCreate}
           style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '10px 20px',
-            background: 'linear-gradient(135deg, #0d9488, #0891b2)',
-            color: 'white', border: 'none', borderRadius: '12px',
-            fontSize: '13px', fontWeight: '600', cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(13,148,136,0.3)',
-            fontFamily: 'inherit', transition: 'all 0.2s'
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 24px', border: 'none',
+            borderRadius: '14px', color: '#fff', fontSize: '15px', fontWeight: '600', fontFamily: 'inherit',
+            cursor: 'pointer', background: 'linear-gradient(135deg, #0d9488, #0891b2)',
+            boxShadow: '0 6px 18px rgba(13, 148, 136, 0.35)',
           }}
-          onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 20px rgba(13,148,136,0.45)'}
-          onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 14px rgba(13,148,136,0.3)'}
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-            <line x1="12" y1="5" x2="12" y2="19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-            <line x1="5" y1="12" x2="19" y2="12" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-          </svg>
-          Create New Course
+          <span style={{ fontSize: '20px', lineHeight: 1 }}>+</span> Create New Course
         </button>
       </div>
 
-      {/* ── Stat Cards ── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '16px',
-        marginBottom: '24px'
-      }}>
-        {statCards.map(s => <StatCard key={s.label} {...s} />)}
+      {/* Stats */}
+      <div
+        style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '20px', marginBottom: '28px',
+        }}
+      >
+        <StatCard icon="📘" iconBg="#eff6ff" value={courses.length} label="Total Courses"
+          note={`${activeCourses} active`} noteColor="#0d9488" />
+        <StatCard icon="👥" iconBg="#f0fdfa" value={uniqueStudents} label="Total Students"
+          note="Across all courses" noteColor="#0d9488" />
+        <StatCard icon="🎬" iconBg="#fff7ed" value={totalLectures} label="Total Lectures"
+          note="Uploaded so far" noteColor="#d97706" />
+        <StatCard icon="🚀" iconBg="#f5f3ff" value={courses.length - activeCourses} label="Draft Courses"
+          note={courses.length - activeCourses > 0 ? 'Ready to publish?' : 'All published'} noteColor="#7c3aed" />
       </div>
 
-      {/* ── Bottom Grid ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '20px' }}>
-
-        {/* ── Courses Table ── */}
-        <div style={{
-          background: 'white', borderRadius: '16px',
-          border: '1px solid #e2e8f0', overflow: 'hidden'
-        }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '18px 22px', borderBottom: '1px solid #f1f5f9'
-          }}>
+      {/* Bottom grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', alignItems: 'start' }}>
+        {/* My courses */}
+        <div style={{ ...card, gridColumn: 'span 2', minWidth: 0, overflow: 'hidden' }}>
+          <div
+            style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '22px 24px', gap: '12px',
+            }}
+          >
             <div>
-              <h2 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '2px' }}>
-                My Courses
-              </h2>
-              <p style={{ fontSize: '12px', color: '#94a3b8' }}>
-                {courses.length} courses this semester
-              </p>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>My Courses</div>
+              <div style={{ fontSize: '14px', color: '#64748b', marginTop: '4px' }}>
+                {courses.length} {courses.length === 1 ? 'course' : 'courses'} in total
+              </div>
             </div>
             <button
+              type="button"
               onClick={() => navigate('/teacher/courses')}
               style={{
-                display: 'flex', alignItems: 'center', gap: '4px',
-                fontSize: '12px', fontWeight: '600', color: '#0d9488',
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontFamily: 'inherit', padding: 0
+                background: 'none', border: 'none', color: '#0d9488', fontSize: '14px',
+                fontWeight: '600', fontFamily: 'inherit', cursor: 'pointer',
               }}
             >
-              View all
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                <polyline points="9 18 15 12 9 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              View all ›
             </button>
           </div>
 
-          {courses.map((course, i) => (
-            <CourseRow key={course.id} course={course} isLast={i === courses.length - 1} />
-          ))}
+          {loading ? (
+            <div style={{ padding: '40px 24px', textAlign: 'center', color: '#64748b', borderTop: '1px solid #f1f5f9' }}>
+              Loading your courses…
+            </div>
+          ) : courses.length === 0 ? (
+            <div style={{ padding: '40px 24px', textAlign: 'center', borderTop: '1px solid #f1f5f9' }}>
+              <div style={{ fontSize: '40px', marginBottom: '8px' }}>📚</div>
+              <div style={{ fontWeight: '600', color: '#0f172a', marginBottom: '6px' }}>No courses yet</div>
+              <div style={{ color: '#64748b', fontSize: '14px', marginBottom: '16px' }}>
+                Create your first course to get started.
+              </div>
+              <button
+                type="button"
+                onClick={goCreate}
+                style={{
+                  padding: '11px 22px', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: '600',
+                  fontFamily: 'inherit', cursor: 'pointer', background: 'linear-gradient(135deg, #0d9488, #0891b2)',
+                }}
+              >
+                + Create Course
+              </button>
+            </div>
+          ) : (
+            courses.slice(0, 5).map((c) => <CourseRow key={c._id} course={c} onManage={goManage} />)
+          )}
         </div>
 
-        {/* ── Right Column ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-          {/* Quick Actions */}
-          <div style={{
-            background: 'white', borderRadius: '16px',
-            border: '1px solid #e2e8f0', padding: '18px'
-          }}>
-            <h2 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>
-              Quick Actions
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {[
-                { label: 'Upload New Lecture', color: '#0d9488', bg: '#f0fdfa', border: '#ccfbf1', onClick: () => navigate('/teacher/courses') },
-                { label: 'Create Assignment', color: '#2563eb', bg: '#eff6ff', border: '#dbeafe', onClick: () => navigate('/teacher/assignments') },
-                { label: 'Schedule Live Class', color: '#8b5cf6', bg: '#f5f3ff', border: '#ede9fe', soon: true },
-              ].map(a => (
-                <QuickAction key={a.label} {...a} />
-              ))}
-            </div>
+        {/* Quick actions */}
+        <div style={{ ...card, padding: '22px 24px' }}>
+          <div style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', marginBottom: '16px' }}>
+            Quick Actions
           </div>
-
-          {/* Activity Feed */}
-          <div style={{
-            background: 'white', borderRadius: '16px',
-            border: '1px solid #e2e8f0', padding: '18px', flex: 1
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-              <h2 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>
-                Recent Activity
-              </h2>
-              <span style={{
-                fontSize: '10px', fontWeight: '700',
-                background: '#fef2f2', color: '#ef4444',
-                padding: '3px 8px', borderRadius: '999px',
-                display: 'flex', alignItems: 'center', gap: '4px'
-              }}>
-                <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#ef4444', display: 'inline-block' }}/>
-                Live
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {activity.map((a, i) => (
-                <div key={a.id} style={{
-                  display: 'flex', gap: '10px', paddingTop: '10px', paddingBottom: '10px',
-                  borderBottom: i < activity.length - 1 ? '1px solid #f8fafc' : 'none'
-                }}>
-                  <ActivityDot type={a.type} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5', marginBottom: '2px' }}>
-                      {a.text}
-                    </p>
-                    <p style={{ fontSize: '11px', color: '#94a3b8' }}>{a.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <QuickAction label="Upload New Lecture" tone="teal" onClick={() => navigate('/teacher/courses')} />
+            <QuickAction label="Create Assignment" tone="blue" onClick={() => navigate('/teacher/assignments')} />
+            <QuickAction label="Schedule Live Class" tone="purple" disabled />
           </div>
-
         </div>
       </div>
     </div>
   )
 }
-
-// ── Course Row ──
-const CourseRow = ({ course, isLast }) => {
-  const [hovered, setHovered] = useState(false)
-  const progressColor = course.completion >= 75 ? '#0d9488' : course.completion >= 50 ? '#2563eb' : '#f59e0b'
-
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: '14px',
-        padding: '14px 22px',
-        borderBottom: isLast ? 'none' : '1px solid #f8fafc',
-        background: hovered ? '#fafafa' : 'white',
-        transition: 'background 0.15s'
-      }}
-    >
-      <div style={{
-        width: '42px', height: '42px', borderRadius: '12px',
-        background: '#f0fdfa', display: 'flex',
-        alignItems: 'center', justifyContent: 'center',
-        fontSize: '20px', flexShrink: 0
-      }}>
-        {course.subject}
-      </div>
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-          <p style={{
-            fontSize: '13px', fontWeight: '600', color: '#0f172a',
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-          }}>
-            {course.title}
-          </p>
-          <span style={{
-            fontSize: '10px', fontWeight: '600', padding: '2px 8px',
-            borderRadius: '999px', flexShrink: 0,
-            background: course.status === 'active' ? '#f0fdf4' : '#f8fafc',
-            color: course.status === 'active' ? '#16a34a' : '#94a3b8',
-          }}>
-            {course.status === 'active' ? 'Active' : 'Draft'}
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <span style={{ fontSize: '11px', color: '#94a3b8' }}>{course.students} students</span>
-          <span style={{ fontSize: '11px', color: '#94a3b8' }}>{course.lectures} lectures</span>
-        </div>
-      </div>
-
-      <div style={{ width: '90px', flexShrink: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-          <span style={{ fontSize: '10px', color: '#94a3b8' }}>Progress</span>
-          <span style={{ fontSize: '10px', fontWeight: '600', color: '#0f172a' }}>{course.completion}%</span>
-        </div>
-        <div style={{ height: '4px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
-          <div style={{
-            height: '100%', width: `${course.completion}%`,
-            background: progressColor, borderRadius: '999px',
-            transition: 'width 0.6s ease'
-          }}/>
-        </div>
-      </div>
-
-      <ManageButton />
-    </div>
-  )
-}
-
-const ManageButton = () => {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <button
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        padding: '6px 14px', borderRadius: '8px', flexShrink: 0,
-        border: hovered ? '1px solid #0d9488' : '1px solid #e2e8f0',
-        background: hovered ? '#f0fdfa' : 'white',
-        fontSize: '12px', fontWeight: '500',
-        color: hovered ? '#0d9488' : '#374151',
-        cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s'
-      }}
-    >
-      Manage
-    </button>
-  )
-}
-
-const QuickAction = ({ label, color, bg, border, soon, onClick }) => {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <button
-      onClick={soon ? undefined : onClick}
-      onMouseEnter={() => !soon && setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '11px 14px', borderRadius: '10px', width: '100%',
-        border: `1px solid ${hovered ? color : border}`,
-        background: bg,
-        cursor: soon ? 'default' : 'pointer',
-        fontFamily: 'inherit', transition: 'all 0.15s',
-        opacity: soon ? 0.6 : 1
-      }}
-    >
-      <span style={{ fontSize: '13px', fontWeight: '500', color }}>{label}</span>
-      {soon
-        ? <span style={{
-            fontSize: '10px', fontWeight: '600', color: '#94a3b8',
-            background: '#f1f5f9', padding: '2px 7px', borderRadius: '999px'
-          }}>Soon</span>
-        : <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <polyline points="9 18 15 12 9 6" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-      }
-    </button>
-  )
-}
-
-export default TeacherDashboard
