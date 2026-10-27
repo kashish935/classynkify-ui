@@ -45,6 +45,17 @@ export default function EnrolledCourses({ courses }) {
                   />
                 </div>
               </div>
+
+              {/* Quiz button (new) */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation() // don't also open the course player
+                  navigate(`/student/quiz?courseId=${course._id}`)
+                }}
+                className="mt-3 w-full text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg py-2 transition"
+              >
+                Quiz me
+              </button>
             </div>
           </div>
         ))}

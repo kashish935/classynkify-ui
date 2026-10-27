@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { NotificationBell } from '../components/notifications'
 
 const NAV_ITEMS = [
   {
@@ -271,22 +272,7 @@ export default function TeacherLayout() {
 
           {/* Right: bell + avatar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button style={{
-              width: '38px', height: '38px', borderRadius: '10px',
-              border: '1px solid #e8ecf0', background: 'white',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: '#64748b', position: 'relative'
-            }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-              </svg>
-              <div style={{
-                position: 'absolute', top: '8px', right: '8px',
-                width: '7px', height: '7px', borderRadius: '50%',
-                background: '#0d9488', border: '1.5px solid white'
-              }}/>
-            </button>
+            <NotificationBell role="teacher" />
 
             <button
               onClick={() => navigate('/teacher/profile')}
