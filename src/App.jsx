@@ -21,6 +21,7 @@ import Grades        from './pages/student/Grades'
 import Profile       from './pages/student/Profile'
 import DoubtSolver   from './pages/student/DoubtSolver'
 import CoursesPage   from './pages/student/coursespage'
+import Quiz from './pages/student/Quiz'
 
 // Teacher
 import TeacherLayout      from './layouts/TeacherLayout'
@@ -72,6 +73,7 @@ export default function App() {
               <Route path="grades"            element={<Grades />} />
               <Route path="profile"           element={<Profile />} />
               <Route path="doubt-solver"      element={<DoubtSolver />} />
+              <Route path="quiz"              element={<Quiz />} />
             </Route>
 
             {/* ─── Teacher (protected + nested) ─── */}
