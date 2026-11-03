@@ -8,7 +8,8 @@ import {
   gradeTeacherSubmission,
   apiError,
 } from '../../services/teacherAssignmentService'
-
+import ImagePicker from '../../components/ImagePicker'
+import ImageThumbs from '../../components/ImageThumbs'
 // ── Helpers ──
 const getDaysLeft = (dueDate) => {
   const diff = new Date(dueDate) - new Date()
@@ -24,6 +25,7 @@ const formatDate = (dateStr) => {
 
 // ── Create Assignment Modal ──
 const CreateModal = ({ courses, onSave, onCancel }) => {
+  const [files, setFiles] = useState([]) // question paper photos
   const [form, setForm] = useState({
     title: '', courseId: '', courseName: '', description: '', dueDate: '', totalMarks: '100'
   })
@@ -46,7 +48,7 @@ const CreateModal = ({ courses, onSave, onCancel }) => {
     if (!form.description.trim()) { setError('Please add a description.'); return }
     setSaving(true)
     try {
-      await onSave(form)
+      await onSave({ ...form, files })
     } catch (err) {
       setError(apiError(err, 'Could not create the assignment. Please try again.'))
       setSaving(false)
@@ -194,6 +196,14 @@ const CreateModal = ({ courses, onSave, onCancel }) => {
             />
           </div>
 
+          {/* Question images */}
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: '#374151', marginBottom: '5px' }}>
+              Question images <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '400' }}>(optional)</span>
+            </label>
+            <ImagePicker onChange={setFiles} max={10} accent="#2563eb" label="Upload question images" />
+          </div>
+
           {/* Actions */}
           <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
             <button type="button" onClick={onCancel} style={{
@@ -272,9 +282,16 @@ const GradeModal = ({ submission, totalMarks, onSave, onCancel }) => {
           <p style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             Student's Submission
           </p>
-          <p style={{ fontSize: '13px', color: '#374151', lineHeight: '1.6' }}>
-            {submission.content}
-          </p>
+                    {submission.content && (
+            <p style={{ fontSize: '13px', color: '#374151', lineHeight: '1.6' }}>
+              {submission.content}
+            </p>
+          )}
+          {submission.images?.length > 0 && (
+            <div style={{ marginTop: submission.content ? '10px' : 0 }}>
+              <ImageThumbs images={submission.images} size={96} />
+            </div>
+          )}
           <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px' }}>
             Submitted on {formatDate(submission.submittedAt)}
           </p>
@@ -423,6 +440,12 @@ const AssignmentCard = ({ assignment, onViewSubmissions, onDelete, onToggleStatu
           }}>
             {assignment.description}
           </p>
+          {/* add the new block right here, after this closing </p> */}
+          {assignment.questionImages?.length > 0 && (
+          <div style={{ marginTop: '10px' }}>
+             <ImageThumbs images={assignment.questionImages} size={56} />
+          </div>
+   )}
         </div>
 
         {/* 3-dot menu */}
@@ -637,6 +660,11 @@ const SubmissionsPanel = ({ assignment, onClose, onGrade }) => {
                     border: '1px solid #e2e8f0', marginBottom: '12px'
                   }}>
                     {sub.content}
+                    {sub.images?.length > 0 && (
+                      <div style={{ marginTop: sub.content ? '10px' : 0 }}>
+                        <ImageThumbs images={sub.images} size={88} />
+                      </div>
+                    )}
                   </div>
 
                   {/* Grade button */}

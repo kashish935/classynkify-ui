@@ -12,15 +12,16 @@ export const getTeacherCourseOptions = async () => {
   return (data.courses || []).map((c) => ({ _id: c._id, title: c.title }))
 }
 
+// form.files = optional array of JPG/PNG File objects (the question paper photos).
+// Sent as multipart/form-data so the photos can travel with the text fields.
 export const createTeacherAssignment = async (form) => {
-  const { data } = await axiosInstance.post('/teacher/assignments', {
-    title: form.title,
-    courseId: form.courseId,
-    courseName: form.courseName,
-    description: form.description,
-    dueDate: form.dueDate,
-    totalMarks: form.totalMarks,
-  })
+  const body = new FormData()
+  ;['title', 'courseId', 'courseName', 'description', 'dueDate', 'totalMarks'].forEach((key) =>
+    body.append(key, form[key] ?? '')
+  )
+  ;(form.files || []).forEach((file) => body.append('images', file))
+
+  const { data } = await axiosInstance.post('/teacher/assignments', body)
   return data.assignment
 }
 
