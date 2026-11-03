@@ -48,9 +48,12 @@ export const getStudentAssignments = async () => {
   return data.assignments || []
 }
 
-export const submitAssignment = async (assignmentId, content) => {
-  const { data } = await axiosInstance.post(`/student/assignments/${assignmentId}/submit`, { content })
-  return data
+export const submitAssignment = async (assignmentId, content, files = []) => {
+  const body = new FormData()
+  body.append('content', content)
+  files.forEach((file) => body.append('images', file))
+  const { data } = await axiosInstance.post(`/student/assignments/${assignmentId}/submit`, body)
+  return data // { message, submission: { content, images, submittedAt } }
 }
 
 export const getStudentGrades = async () => {

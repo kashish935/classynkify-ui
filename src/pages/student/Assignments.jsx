@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
 import { getStudentAssignments, submitAssignment, apiError } from '../../services/studentService'
+import ImagePicker from '../../components/ImagePicker'
+import ImageThumbs from '../../components/ImageThumbs'
 
 const STATUS_CONFIG = {
   pending:   { label: 'Pending',   bg: '#fff7ed', color: '#ea580c', dot: '#f97316', border: '#fed7aa' },
@@ -21,12 +23,22 @@ function AssignmentCard({ assignment, onSubmit }) {
   const [expanded, setExpanded] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [text, setText] = useState('')
+  const [files, setFiles] = useState([]) // answer photos chosen in the picker
+
+  const canSubmit = !submitting && (text.trim() || files.length > 0)
 
   const handleSubmit = async () => {
-    if (!text.trim()) return
+    if (!canSubmit) return
     setSubmitting(true)
-    try { await onSubmit(assignment._id, text); setText(''); setExpanded(false) }
-    finally { setSubmitting(false) }
+    try {
+      const ok = await onSubmit(assignment._id, text, files)
+      if (ok) { setText(''); setFiles([]); setExpanded(false) } // keep everything if it failed
+    } finally { setSubmitting(false) }
+  }
+
+  const toggleExpanded = () => {
+    if (expanded) setFiles([]) // the picker is unmounted when closed, so its photos go too
+    setExpanded(!expanded)
   }
 
   const dueLabel = daysLeft === null ? '' :
@@ -76,6 +88,16 @@ function AssignmentCard({ assignment, onSubmit }) {
             {assignment.description && (
               <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.6 }}>{assignment.description}</p>
             )}
+
+            {/* Question paper photos from the teacher */}
+            {assignment.questionImages?.length > 0 && (
+              <div style={{ marginTop: '12px' }}>
+                <p style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Question paper · tap a photo to open it
+                </p>
+                <ImageThumbs images={assignment.questionImages} size={120} />
+              </div>
+            )}
           </div>
 
           {/* Grade badge */}
@@ -92,10 +114,17 @@ function AssignmentCard({ assignment, onSubmit }) {
         </div>
 
         {/* Your submission */}
-        {assignment.content && status !== 'pending' && (
+        {(assignment.content || assignment.answerImages?.length > 0) && status !== 'pending' && (
           <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '10px 14px', marginBottom: '12px', border: '1px solid #f1f5f9' }}>
             <p style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your submission</p>
-            <p style={{ fontSize: '13px', color: '#334155', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{assignment.content}</p>
+            {assignment.content && (
+              <p style={{ fontSize: '13px', color: '#334155', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{assignment.content}</p>
+            )}
+            {assignment.answerImages?.length > 0 && (
+              <div style={{ marginTop: assignment.content ? '10px' : '4px' }}>
+                <ImageThumbs images={assignment.answerImages} size={80} />
+              </div>
+            )}
           </div>
         )}
 
@@ -122,7 +151,7 @@ function AssignmentCard({ assignment, onSubmit }) {
             </div>
           )}
           {status === 'pending' && (
-            <button onClick={() => setExpanded(!expanded)} style={{
+            <button onClick={toggleExpanded} style={{
               padding: '8px 20px',
               background: expanded ? '#f8fafc' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
               color: expanded ? '#64748b' : '#fff',
@@ -140,7 +169,7 @@ function AssignmentCard({ assignment, onSubmit }) {
           <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid #f1f5f9' }}>
             <textarea
               value={text} onChange={e => setText(e.target.value)}
-              placeholder="Write your answer or paste a link here..."
+              placeholder="Write your answer, paste a link, or attach photos of your solution below..."
               rows={4}
               style={{
                 width: '100%', padding: '12px 14px',
@@ -152,13 +181,19 @@ function AssignmentCard({ assignment, onSubmit }) {
               onFocus={e => e.target.style.borderColor = '#6366f1'}
               onBlur={e => e.target.style.borderColor = '#e2e8f0'}
             />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
-              <button onClick={handleSubmit} disabled={submitting || !text.trim()} style={{
+
+            {/* Answer photos */}
+            <div style={{ marginTop: '12px' }}>
+              <ImagePicker onChange={setFiles} max={5} accent="#6366f1" label="Upload answer photos" />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '14px' }}>
+              <button onClick={handleSubmit} disabled={!canSubmit} style={{
                 padding: '10px 24px',
-                background: submitting || !text.trim() ? '#c7d2fe' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                background: !canSubmit ? '#c7d2fe' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
                 color: '#fff', border: 'none', borderRadius: '10px',
                 fontSize: '13px', fontWeight: '600',
-                cursor: submitting || !text.trim() ? 'not-allowed' : 'pointer',
+                cursor: !canSubmit ? 'not-allowed' : 'pointer',
                 fontFamily: 'inherit'
               }}>
                 {submitting ? 'Submitting…' : 'Submit Assignment'}
@@ -184,15 +219,24 @@ export default function Assignments() {
       .finally(() => setLoading(false))
   }, [])
 
-  const handleSubmit = async (id, content) => {
+  // Returns true when the submission went through, so the card knows whether to clear itself
+  const handleSubmit = async (id, content, files) => {
     try {
-      await submitAssignment(id, content)
+      const { submission } = await submitAssignment(id, content, files)
       setAssignments(prev => prev.map(a =>
-        a._id === id ? { ...a, status: 'submitted', content, submittedAt: new Date().toISOString() } : a
+        a._id === id ? {
+          ...a,
+          status: 'submitted',
+          content: submission?.content ?? content.trim(),
+          answerImages: submission?.images || [],
+          submittedAt: submission?.submittedAt || new Date().toISOString(),
+        } : a
       ))
       toast.success('Assignment submitted!')
+      return true
     } catch (err) {
       toast.error(apiError(err, 'Submission failed. Try again.'))
+      return false
     }
   }
 
